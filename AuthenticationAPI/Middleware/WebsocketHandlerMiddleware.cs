@@ -1,0 +1,306 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.WebSockets;
+using System.Threading.Tasks;
+using System.Text;
+using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using AuthenticationAPI.Kernel;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using AuthenticationAPI.DtoS;
+
+namespace AuthenticationAPI.Middleware
+{
+    public class WebsocketHandlerMiddleware : IDisposable
+    {
+        private readonly RequestDelegate _next;
+        private readonly ILogger _logger;
+        private readonly IQueueManager _QueueManager;
+        private readonly IMessageManager _MessageManager;
+        private int _TaskSleepPeriodMs = 1000;
+        private Thread _route = null;
+        private bool _keepRunning = true;
+
+        public WebsocketHandlerMiddleware(RequestDelegate next,ILoggerFactory loggerFactory, IMessageManager MessageManage, IQueueManager QueueManager)
+        {
+            _next = next;
+
+            _QueueManager = QueueManager;
+            _MessageManager = MessageManage;
+
+            _logger = loggerFactory.CreateLogger<WebsocketHandlerMiddleware>();
+
+            _route = new Thread(new ThreadStart(scanSendQueueTask));
+            _route.IsBackground = true;
+            _route.Start();
+            
+        }
+
+
+        private void scanSendQueueTask()
+        {
+            int count = 0;
+            while (_keepRunning)
+            {
+                try
+                {
+                    count++;
+                    DoSendProc();
+                    int queue_deap = _QueueManager.GetCount();
+                    if (queue_deap <= 0)
+                    {
+                        Thread.Sleep(this._TaskSleepPeriodMs);
+                        continue;
+                    }
+                    if (count > int.MaxValue)
+                    {
+                        count = 0;
+                        Thread.Sleep(this._TaskSleepPeriodMs);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void DoSendProc()
+        {
+
+            // 送出 WebSocket to Client
+            AuthenticationAPI.Kernel.MessageTrx msg = _QueueManager.GetMessage();
+            if (msg != null)
+            {
+                string ClientID = msg.ClientID;
+                string Function = msg.Function;
+                string MessageBody = msg.Data;
+
+                if(ClientID == string.Empty)
+                {
+                    return;
+                }
+                try
+                {
+                    var client = WebsocketClientCollection.Get(ClientID);
+
+                    if (client != null)
+                    {
+                        client.SendMessageAsync($"ID = {ClientID}, Function = {Function}, Body = {MessageBody}.");
+                    }
+                    else
+                    {
+                        _logger.LogError(string.Format("Client ID Not Exist ."));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(string.Format("Exception Error msg = {0}.", ex.Message));
+                }
+            }
+        }
+
+        public async Task Invoke(HttpContext context)
+        {
+            // 透過Web 收HTTP  / WS transaction 進來.
+
+            if (context.WebSockets.IsWebSocketRequest)
+            {
+                // WEB SOCKET type : 
+                // 進入點一
+                System.Net.WebSockets.WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                //string clientId = Guid.NewGuid().ToString();
+                String path = context.Request.Path.Value.Substring(1);
+                var wsClient = new WebsocketClient
+                {
+                    Id = string.Empty,
+                    Function = path,
+                    WebSocket = webSocket
+                };
+
+                //----- 檢查 Exist Token Info --------
+                if (context.Request.Path.Value.StartsWith("/WS_LOGIN"))
+                {
+                    var bearerToken = context.Request.Query["access_token"].ToString();
+                    if (!String.IsNullOrEmpty(bearerToken))
+                    {
+                        context.Request.Headers.Add("Authorization", "Bearer " + bearerToken);
+                    }
+                }
+
+                if (await this.AuthorizeUserFromHttpContextAsync(context))
+                {
+                    try
+                    {
+                        string ClientID = await this.GetUserNameFromHttpContextAsync(context);
+                        if (ClientID != String.Empty)
+                        {
+                            WSTrx Ws = this.WSTrxReplyOK();
+                            string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
+                            await wsClient.SendMessageAsync(WsJsonStr);  
+                            await Handle(wsClient);
+                        }
+                        else
+                        {
+                            int RTCode = (int)WSAuthErrorCode.TokenInfoError;
+                            WSTrx Ws = this.WSTrxReplyNG(RTCode);
+                            string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
+                            await wsClient.SendMessageAsync(WsJsonStr);  
+                            wsClient.WebSocket.Abort();
+                            await context.Response.WriteAsync("closed");
+                            return;
+                        }    
+                    }
+                    catch (Exception ex)
+                    {
+                        int RTCode = (int)WSAuthErrorCode.ConnectError;
+                        WSTrx Ws = this.WSTrxReplyNG(RTCode);
+                        Ws.ReturnMsg += ", ErrMsg = " + ex.Message;
+                        string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
+                        await wsClient.SendMessageAsync(WsJsonStr);
+                        wsClient.WebSocket.Abort();
+                        await context.Response.WriteAsync("closed");
+                        return;
+                    }
+                }
+                else
+                {
+                    int RTCode = (int)WSAuthErrorCode.AuthorizedError;
+                    WSTrx Ws = this.WSTrxReplyNG(RTCode);
+                    string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
+                    await wsClient.SendMessageAsync(WsJsonStr);
+                    wsClient.WebSocket.Abort();
+                    return;
+                }
+            }
+            else
+            {
+                // context.Response.StatusCode = 404 ;
+                await _next(context);  // 這一行可以判斷是否為WebSocket 連線 如果不是可以轉給Http對應 ->  對應至Controllers 內, 依層次來search .(原件 valueController)     
+            }
+        }
+
+        private async Task Handle(WebsocketClient webSocket)
+        {
+            WebsocketClientCollection.Add(webSocket);
+            _logger.LogInformation($"Websocket client added.");
+
+            WebSocketReceiveResult result = null;
+            do
+            {
+                try
+                {
+                    var buffer = new byte[1024 * 1];
+                    result = await webSocket.WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if (result.MessageType == WebSocketMessageType.Text && !result.CloseStatus.HasValue)
+                    {
+                        var msgString = Encoding.UTF8.GetString(buffer);
+                        _logger.LogInformation($"Websocket client ReceiveAsync message {msgString}.");
+
+                        //------以後這邊考慮組判斷上來的資訊直接對應到反序列化結果------
+                        try
+                        {
+                            MessageTrx Message = new MessageTrx();
+                            Message.ClientID = webSocket.Id;
+                            Message.Data = msgString;
+                            Message.Function = webSocket.Function;
+                            Message.TimeStamp = DateTime.Now;
+
+                            // 進入點一. Message Dispatch (Invoke to Service function)
+
+                            _MessageManager.MessageDispatch(Message.Function, new object[] { Message });
+
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(string.Format("MessageDispatch Error , Msg = {0}.", ex.Message));
+                        }
+
+                    }
+                }
+                catch(Exception ex)
+                {
+                    string errresult = ex.Message.ToString() ;
+                }
+
+                if(result == null)
+                {
+                    break;
+                }
+            }
+            while (!result.CloseStatus.HasValue);
+            WebsocketClientCollection.Remove(webSocket);
+            _logger.LogInformation($"Websocket client closed.");
+        }
+
+     
+        public void Dispose()
+        {
+            _keepRunning = false;
+            Thread.Sleep(1000);
+        }
+        protected string ObtainAppTokenFromHeader(string authHeader)
+        {
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.Contains(" "))
+            {
+                return null;
+            }
+            else
+            {
+                string[] authSchemeAndJwt = authHeader.Split(' ');
+                string authScheme = authSchemeAndJwt[0];
+                if (authScheme != "Bearer")
+                    return null;
+                string jwt = authSchemeAndJwt[1];
+                return jwt;
+            }
+            
+        }
+        protected async Task<bool> AuthorizeUserFromHttpContextAsync(HttpContext context)
+        {
+            var jwtBearerOptions = context.RequestServices.GetRequiredService<JwtBearerOptions>() as JwtBearerOptions;
+            string jwt = this.ObtainAppTokenFromHeader(context.Request.Headers["Authorization"]);
+            if (jwt == null)
+            {
+                return false;
+            }
+            var jwtBacker = new JwtBearerBacker(jwtBearerOptions);
+            return jwtBacker.IsJwtValid(jwt);
+        }
+
+
+        protected async Task<string> GetUserNameFromHttpContextAsync(HttpContext context)
+        {
+            var jwtBearerOptions = context.RequestServices.GetRequiredService<JwtBearerOptions>() as JwtBearerOptions;
+            string jwtHeader = this.ObtainAppTokenFromHeader(context.Request.Headers["Authorization"]);
+            if (jwtHeader == null)
+            {
+                return string.Empty;
+            }
+            var jwtBacker = new JwtBearerBacker(jwtBearerOptions);
+            return jwtBacker.JetUserName(jwtHeader);
+        }
+
+
+        private WSTrx WSTrxReplyNG(int retuenCode)
+        {
+            WSTrx WSReply = new WSTrx();
+            WSReply.ProcStep = ProcessStep.WSKT_CON.ToString();
+            WSReply.ReturnCode = retuenCode;
+            WSReply.ReturnMsg = WSAuthError.ErrorMsg(retuenCode);
+            WSReply.DataContent = string.Empty;
+            return WSReply;
+        }
+
+        private WSTrx WSTrxReplyOK()
+        {
+            WSTrx WSReply = new WSTrx();
+            WSReply.ProcStep = ProcessStep.WSKT_CON.ToString();
+            WSReply.ReturnCode = 0;
+            WSReply.ReturnMsg = "Login Success";
+            WSReply.DataContent = string.Empty;
+            return WSReply;
+        }
+
+    }
+}
