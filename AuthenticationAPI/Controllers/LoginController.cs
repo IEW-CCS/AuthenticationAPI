@@ -35,9 +35,9 @@ namespace AuthenticationAPI.Controllers
         }
 
         [HttpPost("regLogin")]
-        public HTTPTrx regLogin(HTTPTrx Msg)
+        public HttpTrx regLogin(HttpTrx Msg)
         {
-            HTTPTrx HttpReply = null;
+            HttpTrx HttpReply = null;
             string UserName = Msg.UserName;
             string DeviceType = Msg.DeviceType;
             if (UserName == string.Empty)
@@ -124,14 +124,13 @@ namespace AuthenticationAPI.Controllers
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);
             return token.ToString();
         }
-        private HTTPTrx ReplyOKHttpTrx(string userName,string DeviceType, APREGREQ apreqreg)
+        private HttpTrx ReplyOKHttpTrx(string userName,string DeviceType, APREGREQ apreqreg)
         {
-            HTTPTrx HttpReply = null;
+            HttpTrx HttpReply = null;
             APREGPLY ARRegReply = new APREGPLY();
             try
             {
-              
-                ARRegReply.Credential = GenerateCredential(userName);
+             
                 ARRegReply.HttpToken = GenerateJWTToken(userName); 
                 ARRegReply.ServerName = Configuration["Server:ServerName"];
                 ARRegReply.HttpServiceURL = Configuration["Server:HttpServiceName"];
@@ -143,7 +142,7 @@ namespace AuthenticationAPI.Controllers
                 AuthDES DES = new AuthDES();
                 string DataContentDES = DES.EncryptDES(ARRegReplyJsonStr);
 
-                HttpECS HESC = new HttpECS();
+                ECS HESC = new ECS();
                 HESC.Algo = "DES";
                 HESC.Key = DES.GetKey();
                 HESC.IV = DES.GetIV();
@@ -162,7 +161,7 @@ namespace AuthenticationAPI.Controllers
 
                 else
                 {
-                    HttpReply = new HTTPTrx();
+                    HttpReply = new HttpTrx();
                     HttpReply.UserName = userName;
                     HttpReply.ProcStep = ProcessStep.AERG_PLY.ToString();
                     HttpReply.ReturnCode = 0;
@@ -180,9 +179,9 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
-        private HTTPTrx ReplyNGHttpTrx( int retuenCode)
+        private HttpTrx ReplyNGHttpTrx( int retuenCode)
         {
-            HTTPTrx HttpReply = new HTTPTrx();
+            HttpTrx HttpReply = new HttpTrx();
             HttpReply.UserName = string.Empty;
             HttpReply.ProcStep = ProcessStep.AERG_PLY.ToString();
             HttpReply.ReturnCode = retuenCode;
@@ -191,9 +190,9 @@ namespace AuthenticationAPI.Controllers
             return HttpReply;
         }
 
-        private HTTPTrx ReplyNGHttpTrx(Exception ex)
+        private HttpTrx ReplyNGHttpTrx(Exception ex)
         {
-            HTTPTrx HttpReply = new HTTPTrx();
+            HttpTrx HttpReply = new HttpTrx();
             HttpReply.UserName = string.Empty;
             HttpReply.ProcStep = ProcessStep.AERG_PLY.ToString();
             HttpReply.ReturnCode = 999;

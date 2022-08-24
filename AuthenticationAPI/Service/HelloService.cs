@@ -61,11 +61,5 @@ namespace AuthenticationAPI.Service
                 db.SaveChanges();
             }*/
         }
-
-        public bool vryope(clsVryope vryopeData)
-        {
-            string testing = "AccountCheckService";
-            return false;
-        }
     }
 }

@@ -11,6 +11,13 @@ namespace AuthenticationAPI.DtoS
         public string UserName { get; set; }
         public string HttpURL { get; set; }
         public string HttpToken { get; set; }
-        public string ProcStep { get; set; }
+        
+        public GENQRINFO()
+        {
+            ServerName = string.Empty;
+            UserName = string.Empty;
+            HttpURL = string.Empty;
+            HttpToken = string.Empty;
+        }
     }
 }

@@ -7,8 +7,13 @@ namespace AuthenticationAPI.DtoS
 {
     public class CCREDREQ
     {
-        public string ServerName { get; set; }
         public string UserName { get; set; }
-        public string MobileRSAPublicKey { get; set; }
+        public DateTime TimeStamp { get; set; }
+
+        public CCREDREQ()
+        {
+            UserName = string.Empty;
+            TimeStamp = DateTime.Now;
+        }
     }
 }

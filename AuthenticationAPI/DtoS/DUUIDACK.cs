@@ -5,18 +5,16 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class DUUIDANN
+    public class DUUIDACK
     {
         public string ServerName { get; set; }
-        public string DeviceUUID { get; set; }
-        public string Credential { get; set; }
+        public string ServicePublicKey { get; set; }
         public DateTime TimeStamp { get; set; }
 
-        public DUUIDANN()
+        public DUUIDACK()
         {
             ServerName = string.Empty;
-            DeviceUUID = string.Empty;
-            Credential = string.Empty;
+            ServicePublicKey = string.Empty;
             TimeStamp = DateTime.Now;
         }
     }

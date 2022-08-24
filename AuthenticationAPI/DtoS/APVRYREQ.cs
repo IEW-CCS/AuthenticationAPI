@@ -14,5 +14,17 @@ namespace AuthenticationAPI.DtoS
         public string APPVersion { get; set; }
         public string OSEnv { get; set; }
         public DateTime TimeStamp { get; set; }
+
+        public APVRYREQ()
+        {
+            ServerName = string.Empty;
+            UserName = string.Empty;
+            PassWord = string.Empty;
+            APPGuid = string.Empty;
+            APPVersion = string.Empty;
+            OSEnv = string.Empty;
+            TimeStamp = DateTime.Now;
+
+        }
     }
 }

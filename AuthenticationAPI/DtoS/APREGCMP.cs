@@ -10,5 +10,14 @@ namespace AuthenticationAPI.DtoS
         public string UserName { get; set; }
         public string DeviceUUID { get; set; }
         public string Result { get; set; }
+        public DateTime TimeStamp { get; set; }
+
+        public APREGCMP()
+        {
+            UserName = string.Empty;
+            DeviceUUID = string.Empty;
+            Result = string.Empty;
+            TimeStamp = DateTime.Now;
+        }
     }
 }

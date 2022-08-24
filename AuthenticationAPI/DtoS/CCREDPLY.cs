@@ -9,7 +9,13 @@ namespace AuthenticationAPI.DtoS
     {
         public string ServerName { get; set; }
         public string Credential { get; set; }
-        public string ServerRSAPublicKey { get; set; }
         public DateTime TimeStamp { get; set; }
+
+        public CCREDPLY()
+        {
+            ServerName = string.Empty;
+            Credential = string.Empty;
+            TimeStamp = DateTime.Now;
+        }
     }
 }

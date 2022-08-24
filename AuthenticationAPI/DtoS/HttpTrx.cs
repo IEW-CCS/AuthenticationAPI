@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class HTTPTrx
+    public class HttpTrx
     {
         public string UserName { get; set; }
         public string DeviceType { get; set; }
@@ -16,7 +16,7 @@ namespace AuthenticationAPI.DtoS
         public string ECS { get; set; }            // Encrype with Public Key 
         public string ECSSign { get; set; }
 
-        public HTTPTrx()
+        public HttpTrx()
         {
             UserName = string.Empty;
             DeviceType = string.Empty;

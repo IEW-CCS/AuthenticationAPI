@@ -63,9 +63,9 @@ namespace AuthenticationAPI.Controllers
         // POST api/<AuthenticateController>
         [HttpPost]
         [EnableCors("CorsPolicy")]
-        public HTTPTrx Post([FromBody] HTTPTrx Msg)
+        public HttpTrx Post([FromBody] HttpTrx Msg)
         {
-            HTTPTrx HttpReply = null;
+            HttpTrx HttpReply = null;
             string UserName = Msg.UserName;
             string DeviceType = Msg.DeviceType;
             string ProcStep = Msg.ProcStep;
@@ -98,7 +98,7 @@ namespace AuthenticationAPI.Controllers
                 {
                     switch (PStep)
                     {
-                        case ProcessStep.CRED_REQ:
+                        case ProcessStep.UUID_RPT:
                             DecrypStr = this.CheckBaseDESData(Msg.DataContent);
                             if (DecrypStr == string.Empty)
                             {
@@ -107,25 +107,26 @@ namespace AuthenticationAPI.Controllers
                             }
                             else
                             {
-                                HttpReply = Do_CRED_REQ(DecrypStr, UserName, DeviceType);
+                                HttpReply = Do_UUID_RPT(DecrypStr, UserName, DeviceType);
                             }
+                           
                             break;
 
-                        case ProcessStep.UUID_RPT:
+                        case ProcessStep.CRED_REQ:
 
-                            string UUID_RPT_RSADecStr = string.Empty;
-                            string UUID_RPT_RSAReturnMsg = string.Empty;
-                            int UUID_RPT_RSAReturnCode = 0;
+                            string CREDREQ_RSADecStr = string.Empty;
+                            string CREDREQ_RSAReturnMsg = string.Empty;
+                            int CREDREQ_RSAReturnCode = 0;
 
-                            UUID_RPT_RSAReturnCode = SecurityManager.GetRSASecurity(UserName, DeviceType).Decrypt_Check(Msg.ECS, Msg.ECSSign, out UUID_RPT_RSADecStr, out UUID_RPT_RSAReturnMsg);
-                            if (UUID_RPT_RSAReturnCode != 0)
+                            CREDREQ_RSAReturnCode = SecurityManager.GetRSASecurity(UserName, DeviceType).Decrypt_Check(Msg.ECS, Msg.ECSSign, out CREDREQ_RSADecStr, out CREDREQ_RSAReturnMsg);
+                            if (CREDREQ_RSAReturnCode != 0)
                             {
-                                HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, UUID_RPT_RSAReturnCode, UUID_RPT_RSAReturnMsg);
+                                HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, CREDREQ_RSAReturnCode, CREDREQ_RSAReturnMsg);
                             }
                             else
                             {
-                                HttpECS ECS = DeserializeObj._HttpECS(UUID_RPT_RSADecStr);  
-                                if(ECS == null)
+                                ECS HESC = DeserializeObj._ECS(CREDREQ_RSADecStr);
+                                if (HESC == null)
                                 {
                                     RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                                     HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, RTCode);
@@ -133,7 +134,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    DecrypStr = this.CheckDESData(ECS.Key, ECS.IV,Msg.DataContent);
+                                    DecrypStr = this.CheckDESData(HESC.Key, HESC.IV, Msg.DataContent);
                                     if (DecrypStr == string.Empty)
                                     {
                                         RTCode = (int)HttpAuthErrorCode.DecryptError;
@@ -141,7 +142,7 @@ namespace AuthenticationAPI.Controllers
                                     }
                                     else
                                     {
-                                         HttpReply = Do_UUID_RPT(DecrypStr,UserName, DeviceType);
+                                        HttpReply = Do_CRED_REQ(DecrypStr, UserName, DeviceType);
                                     }
                                 }
                             }
@@ -160,15 +161,15 @@ namespace AuthenticationAPI.Controllers
                             }
                             else
                             {
-                                HttpECS ECS = DeserializeObj._HttpECS(AREG_CMP_RSADecStr);
-                                if (ECS == null)
+                                ECS HESC = DeserializeObj._ECS(AREG_CMP_RSADecStr);
+                                if (HESC == null)
                                 {
                                     RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                                     HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, RTCode);
                                 }
                                 else
                                 {
-                                    DecrypStr = this.CheckDESData(ECS.Key, ECS.IV, Msg.DataContent);
+                                    DecrypStr = this.CheckDESData(HESC.Key, HESC.IV, Msg.DataContent);
                                     if (DecrypStr == string.Empty)
                                     {
                                         RTCode = (int)HttpAuthErrorCode.DecryptError;
@@ -211,9 +212,9 @@ namespace AuthenticationAPI.Controllers
             return success;
         }
 
-        private HTTPTrx ReplyNGHttpTrx(string processstep,int returnCode)
+        private HttpTrx ReplyNGHttpTrx(string processstep,int returnCode)
         {
-            HTTPTrx HttpReply = new HTTPTrx();
+            HttpTrx HttpReply = new HttpTrx();
             HttpReply.UserName = string.Empty;
             HttpReply.ProcStep = processstep;
             HttpReply.ReturnCode = returnCode;
@@ -222,9 +223,9 @@ namespace AuthenticationAPI.Controllers
             return HttpReply;
         }
 
-        private HTTPTrx ReplyNGHttpTrx(string processstep, int returnode, string returnMsg)
+        private HttpTrx ReplyNGHttpTrx(string processstep, int returnode, string returnMsg)
         {
-            HTTPTrx HttpReply = new HTTPTrx();
+            HttpTrx HttpReply = new HttpTrx();
             HttpReply.UserName = string.Empty;
             HttpReply.ProcStep = processstep;
             HttpReply.ReturnCode = returnode;
@@ -233,9 +234,9 @@ namespace AuthenticationAPI.Controllers
             return HttpReply;
         }
 
-        private HTTPTrx ReplyNGHttpTrx(string processstep, Exception ex)
+        private HttpTrx ReplyNGHttpTrx(string processstep, Exception ex)
         {
-            HTTPTrx HttpReply = new HTTPTrx();
+            HttpTrx HttpReply = new HttpTrx();
             HttpReply.UserName = string.Empty;
             HttpReply.ProcStep = processstep;
             HttpReply.ReturnCode = 999;
@@ -246,9 +247,9 @@ namespace AuthenticationAPI.Controllers
 
 
         //--------  Do CRED_REQ -----
-        private HTTPTrx Do_CRED_REQ(string DecrypStr, string UserName, string DeviceType)
+        private HttpTrx Do_CRED_REQ(string DecrypStr, string UserName, string DeviceType)
         {
-            HTTPTrx HttpReply = null;
+            HttpTrx HttpReply = null;
             string ReplyProcStep = ProcessStep.CRED_PLY.ToString();
             CCREDREQ ccredreq = DeserializeObj._CCREDREQ(DecrypStr);
             if (ccredreq == null)
@@ -258,27 +259,21 @@ namespace AuthenticationAPI.Controllers
             }
             else
             {
-
-                //----  Update Information -----
-                SecurityManager.GetRSASecurity(UserName, DeviceType).setClientID = UserName;
-                SecurityManager.GetRSASecurity(UserName, DeviceType).setClientPublicKey = ccredreq.MobileRSAPublicKey;
-
                 //---- Reply Information -----
-                HttpReply = new HTTPTrx();
+                HttpReply = new HttpTrx();
                 CCREDPLY CCredReply = new CCREDPLY();
                 try
                 {
                     //------ Assemble ------
                     CCredReply.ServerName =  Configuration["Server:ServerName"];
                     CCredReply.Credential = this.GetCredential(UserName);
-                    CCredReply.ServerRSAPublicKey = SecurityManager.GetRSASecurity(UserName, DeviceType).PublicKey;
                     CCredReply.TimeStamp = DateTime.Now;
 
                     string CCredReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(CCredReply);
                     AuthDES DES = new AuthDES();
                     string DataContentDES = DES.EncryptDES(CCredReplyJsonStr);
 
-                    HttpECS HESC = new HttpECS();
+                    ECS HESC = new ECS();
                     HESC.Algo = "DES";
                     HESC.Key = DES.GetKey();
                     HESC.IV = DES.GetIV();
@@ -296,7 +291,7 @@ namespace AuthenticationAPI.Controllers
                     }
                     else
                     {
-                        HttpReply = new HTTPTrx();
+                        HttpReply = new HttpTrx();
                         HttpReply.UserName = UserName;
                         HttpReply.ProcStep = ReplyProcStep;
                         HttpReply.ReturnCode = 0;
@@ -314,9 +309,9 @@ namespace AuthenticationAPI.Controllers
             return HttpReply;
         }
 
-        private HTTPTrx Do_UUID_RPT(string DecrypStr, string UserName, string DeviceType)
+        private HttpTrx Do_UUID_RPT(string DecrypStr, string UserName, string DeviceType)
         {
-            HTTPTrx HttpReply = null;
+            HttpTrx HttpReply = null;
             string ReplyProcStep = ProcessStep.UUID_ACK.ToString();
             DUUIDRPT uuidrpt = DeserializeObj._DUUIDRPT(DecrypStr);
             if (uuidrpt == null)
@@ -326,20 +321,51 @@ namespace AuthenticationAPI.Controllers
             }
             else
             {
-               //-----判斷是否需要Chrck  Server Name .....
+
+                //----  Update Information -----
+                SecurityManager.GetRSASecurity(UserName, DeviceType).setClientID = UserName;
+                SecurityManager.GetRSASecurity(UserName, DeviceType).setClientPublicKey = uuidrpt.MobilePublicKey;
+
+                HttpReply = new HttpTrx();
+                DUUIDACK uuidack = new DUUIDACK();
                 try
                 {
-                    //----  Set UUID Information ------
-                    this.SetDeviceUUID(UserName, uuidrpt.DeviceUUID);
-                    HttpReply = new HTTPTrx();
-                    HttpReply.UserName = UserName;
-                    HttpReply.ProcStep = ReplyProcStep;
-                    HttpReply.ReturnCode = 0;
-                    HttpReply.ReturnMsg = string.Empty;
-                    HttpReply.DataContent = string.Empty;
-                    HttpReply.ECS = string.Empty;
-                    HttpReply.ECSSign = string.Empty;
+                    //------ Assemble ------
+                    uuidack.ServerName = Configuration["Server:ServerName"];
+                    uuidack.ServicePublicKey = SecurityManager.GetRSASecurity(UserName, DeviceType).PublicKey;
+                    uuidack.TimeStamp = DateTime.Now;
 
+                    string UUIDReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidack);
+                    AuthDES DES = new AuthDES();
+                    string DataContentDES = DES.EncryptDES(UUIDReplyJsonStr);
+
+                    ECS HESC = new ECS();
+                    HESC.Algo = "DES";
+                    HESC.Key = DES.GetKey();
+                    HESC.IV = DES.GetIV();
+
+                    string ECSEncryptRetMsg = string.Empty;
+                    string HESCJsonStr = JsonSerializer.Serialize(HESC);
+                    string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(UserName, DeviceType, HESCJsonStr, out ECSEncryptRetMsg);
+
+                    if (ECSEncryptStr == string.Empty)
+                    {
+                        int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
+                        HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
+                        HttpReply.ReturnMsg += ", Error Msg = " + ECSEncryptRetMsg;
+                        return HttpReply;
+                    }
+                    else
+                    {
+                        HttpReply = new HttpTrx();
+                        HttpReply.UserName = UserName;
+                        HttpReply.ProcStep = ReplyProcStep;
+                        HttpReply.ReturnCode = 0;
+                        HttpReply.ReturnMsg = string.Empty;
+                        HttpReply.DataContent = DataContentDES;
+                        HttpReply.ECS = ECSEncryptStr;
+                        HttpReply.ECSSign = string.Empty;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -359,7 +385,6 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 uuidann.ServerName = Configuration["Server:ServerName"];
-                uuidann.UserName = UserName;
                 uuidann.DeviceUUID = UUID;
                 uuidann.TimeStamp = DateTime.Now;
                 //------ Assemble ------
@@ -368,7 +393,7 @@ namespace AuthenticationAPI.Controllers
                 AuthDES DES = new AuthDES();
                 string DataContentDES = DES.EncryptDES(UUIDAnnJsonStr);
 
-                HttpECS HESC = new HttpECS();
+                ECS HESC = new ECS();
                 HESC.Algo = "DES";
                 HESC.Key = DES.GetKey();
                 HESC.IV = DES.GetIV();
@@ -404,9 +429,9 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
-        private HTTPTrx Do_AREG_CMP(string DecrypStr, string UserName, string DeviceType)
+        private HttpTrx Do_AREG_CMP(string DecrypStr, string UserName, string DeviceType)
         {
-            HTTPTrx HttpReply = null;
+            HttpTrx HttpReply = null;
             string ReplyProcStep = ProcessStep.AREG_FIN.ToString();
             APREGCMP apregcmp = DeserializeObj._APREGCMP(DecrypStr);
             if (apregcmp == null)
@@ -419,7 +444,7 @@ namespace AuthenticationAPI.Controllers
                 try
                 {
                     this.SetDeviceRegFinish(UserName);
-                    HttpReply = new HTTPTrx();
+                    HttpReply = new HttpTrx();
                     HttpReply.UserName = UserName;
                     HttpReply.ProcStep = ReplyProcStep;
                     HttpReply.ReturnCode = 0;

@@ -8,76 +8,122 @@ namespace AuthenticationAPI.DtoS
 {
     public class DeserializeObj
     {
-
-        public static HttpECS _HttpECS(string DataContent)
+        public static ECS _ECS(string DataContent)
         {
-            HttpECS HttpECS = null;
+            ECS obj = null;
             try
             {
-                HttpECS = JsonSerializer.Deserialize<HttpECS>(DataContent);
+                obj = JsonSerializer.Deserialize<ECS>(DataContent);
             }
             catch
             {
-                HttpECS = null;
+                obj = null;
             }
-            return HttpECS;
+            return obj;
         }
-
-
         public static APREGREQ _APREGREQ(string DataContent)
         {
-            APREGREQ apreqreg = null;
+            APREGREQ obj = null;
             try
             {
-                apreqreg = JsonSerializer.Deserialize<APREGREQ>(DataContent);
+                obj = JsonSerializer.Deserialize<APREGREQ>(DataContent);
             }
             catch
             {
-                apreqreg = null;
+                obj = null;
             }
-            return apreqreg;
+            return obj;
         }
-
-        public static CCREDREQ _CCREDREQ(string DataContent)
+        public static APREGPLY _APREGPLY(string DataContent)
         {
-            CCREDREQ ccredreq = null;
+            APREGPLY obj = null;
             try
             {
-                ccredreq = JsonSerializer.Deserialize<CCREDREQ>(DataContent);
+                obj = JsonSerializer.Deserialize<APREGPLY>(DataContent);
             }
             catch
             {
-                ccredreq = null;
+                obj = null;
             }
-            return ccredreq;
+            return obj;
         }
-
-        public static DUUIDRPT _DUUIDRPT(string DataContent)
-        {
-            DUUIDRPT uuidrpt = null;
-            try
-            {
-                uuidrpt = JsonSerializer.Deserialize<DUUIDRPT>(DataContent);
-            }
-            catch
-            {
-                uuidrpt = null;
-            }
-            return uuidrpt;
-        }
-
         public static APREGCMP _APREGCMP(string DataContent)
         {
-            APREGCMP apregcmp = null;
+            APREGCMP obj = null;
             try
             {
-                apregcmp = JsonSerializer.Deserialize<APREGCMP>(DataContent);
+                obj = JsonSerializer.Deserialize<APREGCMP>(DataContent);
             }
             catch
             {
-                apregcmp = null;
+                obj = null;
             }
-            return apregcmp;
+            return obj;
+        }
+        public static CCREDREQ _CCREDREQ(string DataContent)
+        {
+            CCREDREQ obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<CCREDREQ>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static CCREDPLY _CCREDPLY(string DataContent)
+        {
+            CCREDPLY obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<CCREDPLY>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static DUUIDRPT _DUUIDRPT(string DataContent)
+        {
+            DUUIDRPT obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<DUUIDRPT>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static DUUIDACK _DUUIDACK(string DataContent)
+        {
+            DUUIDACK obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<DUUIDACK>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static DUUIDANN _DUUIDANN(string DataContent)
+        {
+            DUUIDANN obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<DUUIDANN>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
         }
     }
 }

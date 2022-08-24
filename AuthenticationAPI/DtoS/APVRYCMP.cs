@@ -10,5 +10,12 @@ namespace AuthenticationAPI.DtoS
         public string UserName { get; set; }
         public string Result { get; set; }
         public DateTime TimeStamp { get; set; }
+
+        public APVRYCMP()
+        {
+            UserName = string.Empty;
+            Result = string.Empty;
+            TimeStamp = DateTime.Now;
+        }
     }
 }

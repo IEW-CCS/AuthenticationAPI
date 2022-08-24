@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class HttpECS
+    public class ECS
     {
         public string Algo { get; set; }
         public string Key { get; set; }
