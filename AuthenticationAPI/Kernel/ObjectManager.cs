@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using AuthenticationAPI.DtoS;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,9 +14,10 @@ namespace AuthenticationAPI.Kernel
     {
 
         private readonly ILogger _logger;
-        private string _DBType = string.Empty;
-        private string _DBConnectString = string.Empty;
-         
+        private  ConcurrentDictionary<string, CREDINFO> CredInfo = null;
+        private  ConcurrentDictionary<string, string> DeviceUUID = null;
+
+
         public ObjectManager(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger<ObjectManager>();
@@ -32,32 +35,31 @@ namespace AuthenticationAPI.Kernel
 
         private void Init()
         {
-
-            var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
-            var config = builder.Build();
-            _DBType = config.GetConnectionString("Type1") ?? "My SQL"  ;
-            _DBConnectString = config.GetConnectionString("DefaultConnection") ?? "server=localhost;port=3306;database=hello_db;uid=root;password=qQ123456";
-
+            CredInfo = new ConcurrentDictionary<string, CREDINFO>();
         }
 
-        public string DB_Type
+        public CREDINFO GetCredInfo(string Key)
         {
-            get
-            {
-                return this._DBType;
-            }
-
+            return this.CredInfo.GetOrAdd(Key, new CREDINFO());
         }
 
-        public string DB_ConnectString
+        public void SetCredInfo(string Key, CREDINFO Obj)
         {
-            get
-            {
-                return this._DBConnectString;
-            }
-
+            this.CredInfo.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
         }
 
+        public string GetDeviceUUID(string Key)
+        {
+            return this.DeviceUUID.GetOrAdd(Key, key =>
+            {
+                return string.Empty;
+            });
+        }
+
+        public void SetDeviceUUID(string Key, string uuid)
+        {
+            this.DeviceUUID.AddOrUpdate(Key, uuid, (key, oldvalue) => uuid);
+        }
 
     }
 }

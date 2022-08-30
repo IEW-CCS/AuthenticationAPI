@@ -8,21 +8,20 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DBContext
 {
-
     public class MetaDBContext : DbContext
     {
-        static DbContextOptions CreateDbConnection(string providerName, string connectionString)
+        static DbContextOptions CreateDbConnection( string Provider, string ConnectionString)
         {
             //"server= localhost;database=IoTDB;user=root;password=qQ123456"
             DbContextOptionsBuilder optionsBuilder = new DbContextOptionsBuilder();
-            switch (providerName)
+            switch (Provider)
             {
-                case "MS SQL":
-                    optionsBuilder.UseSqlServer(connectionString);
+                case "MS_SQL":
+                    optionsBuilder.UseSqlServer(ConnectionString);
                     break;
 
-                case "My SQL":
-                    optionsBuilder.UseMySQL(connectionString);
+                case "MY_SQL":
+                    optionsBuilder.UseMySQL(ConnectionString);
                     break;
 
                 default:
@@ -44,6 +43,8 @@ namespace AuthenticationAPI.DBContext
             base.ChangeTracker.AutoDetectChangesEnabled = false;
             base.ChangeTracker.LazyLoadingEnabled = false;
         }
-        public DbSet<HelloWould> hellowould { get; set; }
+        public DbSet<AUTH_CONF> auth_conf { get; set; }
+        public DbSet<AUTH_INFO> auth_info { get; set; }
+        public DbSet<AUTH_SECURITY> auth_security { get; set; }
     }
 }

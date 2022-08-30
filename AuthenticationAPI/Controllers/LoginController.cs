@@ -13,6 +13,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace AuthenticationAPI.Controllers
@@ -26,12 +27,13 @@ namespace AuthenticationAPI.Controllers
         private readonly ILogger<LoginController> Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
-        
-        public LoginController(ILogger<LoginController> _logger, IConfiguration _configuration, ISecurityManager _securitymanager)
+        private readonly IObjectManager ObjectManager;
+        public LoginController(ILogger<LoginController> _logger, IConfiguration _configuration, ISecurityManager _securitymanager, IObjectManager _objectmanager)
         {
             Logger = _logger;
             Configuration = _configuration;
             SecurityManager = _securitymanager;
+            ObjectManager = _objectmanager;
         }
 
         [HttpPost("regLogin")]
@@ -73,16 +75,20 @@ namespace AuthenticationAPI.Controllers
                     }
                     else
                     {
-                        if(this.CheckAuth(apreqreg) != true)
+                        string returnMsg = string.Empty;
+                        if(this.CheckAuth(apreqreg, out returnMsg) != true)
                         {
                             int RTCode = (int)HttpAuthErrorCode.CheckAuthFailed;
-                            HttpReply = this.ReplyNGHttpTrx(RTCode);
+                            HttpReply = this.ReplyNGHttpTrx(RTCode, returnMsg);
                             return HttpReply;
                         }
                         else
                         {
-                            SecurityManager.GetRSASecurity(UserName, DeviceType).setClientID = UserName;
-                            SecurityManager.GetRSASecurity(UserName, DeviceType).setClientPublicKey = apreqreg.ClientRSAPublicKey;
+                            SecurityManager.GetRSASecurity(UserName, DeviceType).ClientID = UserName;
+                            SecurityManager.GetRSASecurity(UserName, DeviceType).ClientPublicKey = apreqreg.ClientRSAPublicKey;
+                            SecurityManager.UpdateToDB(UserName, DeviceType);
+                            UpdateCredInfo(UserName, apreqreg.APPGuid, apreqreg.APPVersion);
+
                             HttpReply = this.ReplyOKHttpTrx(UserName, DeviceType, apreqreg);
                             return HttpReply;
                         }
@@ -179,13 +185,24 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
-        private HttpTrx ReplyNGHttpTrx( int retuenCode)
+        private HttpTrx ReplyNGHttpTrx( int returnCode)
         {
             HttpTrx HttpReply = new HttpTrx();
             HttpReply.UserName = string.Empty;
             HttpReply.ProcStep = ProcessStep.AERG_PLY.ToString();
-            HttpReply.ReturnCode = retuenCode;
-            HttpReply.ReturnMsg = HttpAuthError.ErrorMsg(retuenCode);
+            HttpReply.ReturnCode = returnCode;
+            HttpReply.ReturnMsg = HttpAuthError.ErrorMsg(returnCode);
+            HttpReply.DataContent = string.Empty;
+            return HttpReply;
+        }
+
+        private HttpTrx ReplyNGHttpTrx(int returnCode, string returnMsg)
+        {
+            HttpTrx HttpReply = new HttpTrx();
+            HttpReply.UserName = string.Empty;
+            HttpReply.ProcStep = ProcessStep.AERG_PLY.ToString();
+            HttpReply.ReturnCode = returnCode;
+            HttpReply.ReturnMsg = returnMsg;
             HttpReply.DataContent = string.Empty;
             return HttpReply;
         }
@@ -219,14 +236,49 @@ namespace AuthenticationAPI.Controllers
      
 
         // Wait for write logic
-        private bool CheckAuth (APREGREQ apreqreg)
+        private bool CheckAuth (APREGREQ apreqreg, out string RetMsg)
+        {
+            string provider = Configuration["ConnectionStrings:Provider"];
+            string connectstring =  Configuration["ConnectionStrings:DefaultConnection"];
+            string userName = apreqreg.UserName;
+            string passWord = apreqreg.PassWord;
+            RetMsg = string.Empty;
+            AuthBaseDES objDes = new AuthBaseDES();
+            string securityPssword = string.Empty;
+            if (IsNumandEG(userName) == true &&  IsNumandEG(passWord) == true)
+            {
+                using (var db = new DBContext.MetaDBContext(provider, connectstring))
+                {
+                    securityPssword = objDes.EncryptDES(passWord);
+                    var user = db.auth_info.AsQueryable().Where(o => o.username == userName && o.password == securityPssword).FirstOrDefault();
+                    if (user != null)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        RetMsg = "UserName and Password Not Match.";
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                RetMsg = "UserName and Password obtain illegal characters.";
+                return false;
+            } 
+        }
+
+        private void UpdateCredInfo(string name, string appGuid, string appVersion)
         {
 
-            /* 認證比對目前只比對 User Name / Password in DB */
-            /*
-            Parallel.Invoke(() => result[0] = ProcessFuncAccountCheck(tmpVryopeData),
-                                 () => result[1] = ProcessFuncMonitorSerialtCheck(tmpVryopeData));*/
-            return true;
+            var cred = ObjectManager.GetCredInfo(name);
+            cred.ServerName = Configuration["Server:ServerName"];
+            cred.UserName = name;
+            cred.APPGuid = appGuid;
+            cred.APPVersion = appVersion;
+            ObjectManager.SetCredInfo(name, cred);
+
         }
 
         /*
@@ -256,21 +308,10 @@ namespace AuthenticationAPI.Controllers
             }
         }*/
 
-        private string GenerateCredential(string UserName)
+        public bool IsNumandEG(string word)
         {
-            /* 未來Credential String 產生規則為
-             * BaseDES Credential Class obtain Content and Sign
-             * Credential Content obtain 
-             * String  Server
-               String Type
-               String  ClientPublicKey
-               Datetime  CreateTime
-               String   expire,
-               Sign with signature RSA Private Key Sign in */
-               
-
-           
-            return "Abcde12345";
+            Regex NumandEG = new Regex("[^A-Za-z0-9_.]");
+            return !NumandEG.IsMatch(word);
         }
     }
 }

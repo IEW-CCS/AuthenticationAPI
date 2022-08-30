@@ -11,27 +11,29 @@ using Microsoft.Extensions.DependencyInjection;
 using AuthenticationAPI.Kernel;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using AuthenticationAPI.DtoS;
+using Microsoft.Extensions.Configuration;
 
 namespace AuthenticationAPI.Middleware
 {
     public class WebsocketHandlerMiddleware : IDisposable
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger _logger;
-        private readonly IQueueManager _QueueManager;
-        private readonly IMessageManager _MessageManager;
+        private readonly RequestDelegate next;
+        private readonly ILogger Logger;
+        private readonly IQueueManager QueueManager;
+        private readonly IMessageManager MessageManager;
+        private readonly IConfiguration Configuration;
         private int _TaskSleepPeriodMs = 1000;
         private Thread _route = null;
         private bool _keepRunning = true;
 
-        public WebsocketHandlerMiddleware(RequestDelegate next,ILoggerFactory loggerFactory, IMessageManager MessageManage, IQueueManager QueueManager)
+        public WebsocketHandlerMiddleware(RequestDelegate _next,ILoggerFactory _loggerFactory, IMessageManager _MessageManage, IQueueManager _QueueManager, IConfiguration _Configuration )
         {
-            _next = next;
+            this.next = _next;
 
-            _QueueManager = QueueManager;
-            _MessageManager = MessageManage;
-
-            _logger = loggerFactory.CreateLogger<WebsocketHandlerMiddleware>();
+            QueueManager = _QueueManager;
+            MessageManager = _MessageManage;
+            Configuration = _Configuration;
+            Logger = _loggerFactory.CreateLogger<WebsocketHandlerMiddleware>();
 
             _route = new Thread(new ThreadStart(scanSendQueueTask));
             _route.IsBackground = true;
@@ -49,7 +51,7 @@ namespace AuthenticationAPI.Middleware
                 {
                     count++;
                     DoSendProc();
-                    int queue_deap = _QueueManager.GetCount();
+                    int queue_deap = QueueManager.GetCount();
                     if (queue_deap <= 0)
                     {
                         Thread.Sleep(this._TaskSleepPeriodMs);
@@ -69,7 +71,7 @@ namespace AuthenticationAPI.Middleware
         {
 
             // 送出 WebSocket to Client
-            AuthenticationAPI.Kernel.MessageTrx msg = _QueueManager.GetMessage();
+            AuthenticationAPI.Kernel.MessageTrx msg = QueueManager.GetMessage();
             if (msg != null)
             {
                 string ClientID = msg.ClientID;
@@ -90,12 +92,12 @@ namespace AuthenticationAPI.Middleware
                     }
                     else
                     {
-                        _logger.LogError(string.Format("Client ID Not Exist ."));
+                        Logger.LogError(string.Format("Client ID Not Exist ."));
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(string.Format("Exception Error msg = {0}.", ex.Message));
+                    Logger.LogError(string.Format("Exception Error msg = {0}.", ex.Message));
                 }
             }
         }
@@ -119,7 +121,7 @@ namespace AuthenticationAPI.Middleware
                 };
 
                 //----- 檢查 Exist Token Info --------
-                if (context.Request.Path.Value.StartsWith("/WS_LOGIN"))
+                if (context.Request.Path.Value.StartsWith(Configuration["Server:WSServiceName"]))
                 {
                     var bearerToken = context.Request.Query["access_token"].ToString();
                     if (!String.IsNullOrEmpty(bearerToken))
@@ -176,14 +178,14 @@ namespace AuthenticationAPI.Middleware
             else
             {
                 // context.Response.StatusCode = 404 ;
-                await _next(context);  // 這一行可以判斷是否為WebSocket 連線 如果不是可以轉給Http對應 ->  對應至Controllers 內, 依層次來search .(原件 valueController)     
+                await next(context);  // 這一行可以判斷是否為WebSocket 連線 如果不是可以轉給Http對應 ->  對應至Controllers 內, 依層次來search .(原件 valueController)     
             }
         }
 
         private async Task Handle(WebsocketClient webSocket)
         {
             WebsocketClientCollection.Add(webSocket);
-            _logger.LogInformation($"Websocket client added.");
+            Logger.LogInformation($"Websocket client added.");
 
             WebSocketReceiveResult result = null;
             do
@@ -195,7 +197,7 @@ namespace AuthenticationAPI.Middleware
                     if (result.MessageType == WebSocketMessageType.Text && !result.CloseStatus.HasValue)
                     {
                         var msgString = Encoding.UTF8.GetString(buffer);
-                        _logger.LogInformation($"Websocket client ReceiveAsync message {msgString}.");
+                        Logger.LogInformation($"Websocket client ReceiveAsync message {msgString}.");
 
                         //------以後這邊考慮組判斷上來的資訊直接對應到反序列化結果------
                         try
@@ -208,12 +210,12 @@ namespace AuthenticationAPI.Middleware
 
                             // 進入點一. Message Dispatch (Invoke to Service function)
 
-                            _MessageManager.MessageDispatch(Message.Function, new object[] { Message });
+                            MessageManager.MessageDispatch(Message.Function, new object[] { Message });
 
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(string.Format("MessageDispatch Error , Msg = {0}.", ex.Message));
+                            Logger.LogError(string.Format("MessageDispatch Error , Msg = {0}.", ex.Message));
                         }
 
                     }
@@ -230,7 +232,7 @@ namespace AuthenticationAPI.Middleware
             }
             while (!result.CloseStatus.HasValue);
             WebsocketClientCollection.Remove(webSocket);
-            _logger.LogInformation($"Websocket client closed.");
+            Logger.LogInformation($"Websocket client closed.");
         }
 
      

@@ -9,63 +9,62 @@ namespace AuthenticationAPI.Security
 {
     public class AuthSecurity
     {
-        private string ClientID = string.Empty;
-        private string ClientPublicKey = string.Empty;
+        private string _clientID = string.Empty;
+        private string _clientPublicKey = string.Empty;
       
         //-----------------------------------------------
-        private AuthRSA objAuthRSA = null;
-        private AuthBaseDES objAuthBaseDES = null;
+        private AuthRSA _objAuthRSA = null;
+        private AuthBaseDES _objAuthBaseDES = null;
 
         public AuthSecurity()
         {
-            objAuthRSA = new AuthRSA();
-            objAuthBaseDES = new AuthBaseDES();
-            ClientID = string.Empty;
-            ClientPublicKey = objAuthRSA.publicKey;
-           // ClientPublicKey = string.Empty;
+            _objAuthRSA = new AuthRSA();
+            _objAuthBaseDES = new AuthBaseDES();
+            _clientID = string.Empty;
+            _clientPublicKey = string.Empty;
 
         }
 
         public AuthSecurity(string _privateKey)
         {
-            objAuthBaseDES = new AuthBaseDES();
-            string PrivateKey = objAuthBaseDES.DecryptDES(_privateKey);
-            objAuthRSA = new AuthRSA(PrivateKey);
-            ClientID = string.Empty;
-            ClientPublicKey = string.Empty; 
+            _objAuthBaseDES = new AuthBaseDES();
+            string PrivateKey = _objAuthBaseDES.DecryptDES(_privateKey);
+            _objAuthRSA = new AuthRSA(PrivateKey);
+            _clientID = string.Empty;
+            _clientPublicKey = string.Empty; 
         }
 
         public AuthSecurity(string _privateKey, string _publicKey)
         {
-            objAuthBaseDES = new AuthBaseDES();
-            string PrivateKey = objAuthBaseDES.DecryptDES(_privateKey);
+            _objAuthBaseDES = new AuthBaseDES();
+            string PrivateKey = _objAuthBaseDES.DecryptDES(_privateKey);
             string PublicKey = _publicKey;
-            objAuthRSA = new AuthRSA(PrivateKey, PublicKey);
-            ClientID = string.Empty;
-            ClientPublicKey = string.Empty;
+            _objAuthRSA = new AuthRSA(PrivateKey, PublicKey);
+            _clientID = string.Empty;
+            _clientPublicKey = string.Empty;
           
         }
         //-----------------------------------------------
         public string PrivateKey
         {
-            get { return objAuthBaseDES.EncryptDES(objAuthRSA.privateKey); }
+            get { return _objAuthBaseDES.EncryptDES(_objAuthRSA.privateKey); }
         }
 
         public string PublicKey
         {
-            get { return objAuthRSA.publicKey; }
+            get { return _objAuthRSA.publicKey; }
         }
 
-        public string setClientID
+        public string ClientID
         {
-            get { return ClientID; }
-            set { ClientID = value; }
+            get { return _clientID; }
+            set { _clientID = value; }
         }
 
-        public string setClientPublicKey
+        public string ClientPublicKey
         {
-            get { return ClientPublicKey; }
-            set { ClientPublicKey = value; }
+            get { return _clientPublicKey; }
+            set { _clientPublicKey = value; }
         }
 
     
@@ -75,7 +74,7 @@ namespace AuthenticationAPI.Security
             encryptString = string.Empty;
             int returnCode = 0;
 
-            if (ClientPublicKey == string.Empty)
+            if (_clientPublicKey == string.Empty)
             {
                 returnMsg = "Client Public Key Not Exit";
                 encryptString = string.Empty;
@@ -87,7 +86,7 @@ namespace AuthenticationAPI.Security
                 {
                     RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
                     byte[] terst = Encoding.UTF8.GetBytes(rawContent);
-                    rsa.FromXmlString(ClientPublicKey);
+                    rsa.FromXmlString(_clientPublicKey);
                     encryptString = Convert.ToBase64String(rsa.Encrypt(Encoding.UTF8.GetBytes(rawContent), false));
                     returnMsg = string.Empty;
                     returnCode = 0;
@@ -108,7 +107,7 @@ namespace AuthenticationAPI.Security
             rawContent = string.Empty;
             int returnCode = 0;
 
-            if (objAuthRSA.privateKey == string.Empty)
+            if (_objAuthRSA.privateKey == string.Empty)
             {
                 returnMsg = "Private Key Not Exit";
                 rawContent = string.Empty;
@@ -119,7 +118,7 @@ namespace AuthenticationAPI.Security
                 try
                 {
                     RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-                    rsa.FromXmlString(objAuthRSA.privateKey);
+                    rsa.FromXmlString(_objAuthRSA.privateKey);
                     rawContent = Encoding.UTF8.GetString(rsa.Decrypt(Convert.FromBase64String(encryptedContent), false));
                     returnMsg = string.Empty;
                     returnCode = 0;
@@ -141,7 +140,7 @@ namespace AuthenticationAPI.Security
             returnMsg = string.Empty;
             int returnCode = 0;
 
-            if (objAuthRSA.privateKey == string.Empty)
+            if (_objAuthRSA.privateKey == string.Empty)
             {
                 returnMsg = "Private Key Not Exit";
                 rawContent = string.Empty;
@@ -175,7 +174,7 @@ namespace AuthenticationAPI.Security
             byte[] signText = Encoding.Unicode.GetBytes(signString);
             returnMsg = string.Empty;
             int returnCode = 0;
-            if (ClientPublicKey == string.Empty)
+            if (_clientPublicKey == string.Empty)
             {
                 returnMsg = "Private Key Not Exit";
                 returnCode = 2;
@@ -185,7 +184,7 @@ namespace AuthenticationAPI.Security
                 try
                 {
                     RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-                    rsa.FromXmlString(ClientPublicKey);
+                    rsa.FromXmlString(_clientPublicKey);
                     if (rsa.VerifyData(DataText, new SHA256CryptoServiceProvider(), signText))
                     {
                         returnMsg = String.Empty;
@@ -213,13 +212,13 @@ namespace AuthenticationAPI.Security
             returnMsg = string.Empty;
             int returnCode = 0;
 
-            if (ClientPublicKey == string.Empty)
+            if (_clientPublicKey == string.Empty)
             {
                 returnMsg = "Client Public Key Not Exit";
                 encryptString = string.Empty;
                 returnCode = 1;
             }
-            else if (objAuthRSA.privateKey == string.Empty)
+            else if (_objAuthRSA.privateKey == string.Empty)
             {
                 returnMsg = "Private Key Not Exit";
                 rawContent = string.Empty;
@@ -268,13 +267,13 @@ namespace AuthenticationAPI.Security
             rawContent = string.Empty;
             int returnCode = 0;
 
-            if (ClientPublicKey == string.Empty)
+            if (_clientPublicKey == string.Empty)
             {
                 returnMsg = "Client Public Key Not Exit";
                 rawContent = string.Empty;
                 returnCode = 1;
             }
-            else if (objAuthRSA.privateKey == string.Empty)
+            else if (_objAuthRSA.privateKey == string.Empty)
             {
                 returnMsg = "Private Key Not Exit";
                 rawContent = string.Empty;

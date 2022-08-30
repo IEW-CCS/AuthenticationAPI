@@ -8,6 +8,20 @@ namespace AuthenticationAPI.DtoS
 {
     public class DeserializeObj
     {
+        public static HttpTrx _HttpTrx(string DataContent)
+        {
+            HttpTrx obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<HttpTrx>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+
+        }
         public static ECS _ECS(string DataContent)
         {
             ECS obj = null;
@@ -118,6 +132,45 @@ namespace AuthenticationAPI.DtoS
             try
             {
                 obj = JsonSerializer.Deserialize<DUUIDANN>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static APVRYCMP _APVRYCMP(string DataContent)
+        {
+            APVRYCMP obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<APVRYCMP>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static APVRYREQ _APVRYREQ(string DataContent)
+        {
+            APVRYREQ obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<APVRYREQ>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static APVRYPLY _APVRYPLY(string DataContent)
+        {
+            APVRYPLY obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<APVRYPLY>(DataContent);
             }
             catch
             {

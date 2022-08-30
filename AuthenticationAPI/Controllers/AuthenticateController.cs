@@ -30,9 +30,10 @@ namespace AuthenticationAPI.Controllers
         private readonly IConfiguration Configuration;
         private readonly IQueueManager QueueManager;
         private readonly ISecurityManager SecurityManager;
+        private readonly IObjectManager ObjectManager;
         private readonly MetaDBContext DBcontext;
 
-        public AuthenticateController(ILogger<LoginController> _logger, IEnumerable<IService> _services, IQueueManager _queuemanager, MetaDBContext _dbcontext, IConfiguration _configuration, ISecurityManager _securitymanager)
+        public AuthenticateController(ILogger<LoginController> _logger, IEnumerable<IService> _services, IQueueManager _queuemanager, MetaDBContext _dbcontext, IConfiguration _configuration, ISecurityManager _securitymanager, IObjectManager _objectmanager)
         {
             Logger = _logger;
             Services = _services;
@@ -40,7 +41,7 @@ namespace AuthenticationAPI.Controllers
             QueueManager = _queuemanager;
             DBcontext = _dbcontext;
             SecurityManager = _securitymanager;
-
+            ObjectManager = _objectmanager;
 
         }
 
@@ -108,6 +109,7 @@ namespace AuthenticationAPI.Controllers
                             else
                             {
                                 HttpReply = Do_UUID_RPT(DecrypStr, UserName, DeviceType);
+
                             }
                            
                             break;
@@ -245,6 +247,72 @@ namespace AuthenticationAPI.Controllers
             return HttpReply;
         }
 
+        private HttpTrx Do_UUID_RPT(string DecrypStr, string UserName, string DeviceType)
+        {
+            HttpTrx HttpReply = null;
+            string ReplyProcStep = ProcessStep.UUID_ACK.ToString();
+            DUUIDRPT uuidrpt = DeserializeObj._DUUIDRPT(DecrypStr);
+            if (uuidrpt == null)
+            {
+                int RTCode = (int)HttpAuthErrorCode.DeserializeError;
+                HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
+            }
+            else
+            {
+                //----  Update Information -----
+                SecurityManager.GetRSASecurity(UserName, DeviceType).ClientID = UserName;
+                SecurityManager.GetRSASecurity(UserName, DeviceType).ClientPublicKey = uuidrpt.MobilePublicKey;
+                SecurityManager.UpdateToDB(UserName, DeviceType);
+                ObjectManager.SetDeviceUUID(UserName, uuidrpt.DeviceUUID);
+
+                HttpReply = new HttpTrx();
+                DUUIDACK uuidack = new DUUIDACK();
+                try
+                {
+                    //------ Assemble ------
+                    uuidack.ServerName = Configuration["Server:ServerName"];
+                    uuidack.ServicePublicKey = SecurityManager.GetRSASecurity(UserName, DeviceType).PublicKey;
+                    uuidack.TimeStamp = DateTime.Now;
+
+                    string UUIDReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidack);
+                    AuthDES DES = new AuthDES();
+                    string DataContentDES = DES.EncryptDES(UUIDReplyJsonStr);
+
+                    ECS HESC = new ECS();
+                    HESC.Algo = "DES";
+                    HESC.Key = DES.GetKey();
+                    HESC.IV = DES.GetIV();
+
+                    string ECSEncryptRetMsg = string.Empty;
+                    string HESCJsonStr = JsonSerializer.Serialize(HESC);
+                    string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(UserName, DeviceType, HESCJsonStr, out ECSEncryptRetMsg);
+
+                    if (ECSEncryptStr == string.Empty)
+                    {
+                        int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
+                        HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
+                        HttpReply.ReturnMsg += ", Error Msg = " + ECSEncryptRetMsg;
+                        return HttpReply;
+                    }
+                    else
+                    {
+                        HttpReply = new HttpTrx();
+                        HttpReply.UserName = UserName;
+                        HttpReply.ProcStep = ReplyProcStep;
+                        HttpReply.ReturnCode = 0;
+                        HttpReply.ReturnMsg = string.Empty;
+                        HttpReply.DataContent = DataContentDES;
+                        HttpReply.ECS = ECSEncryptStr;
+                        HttpReply.ECSSign = string.Empty;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, ex);
+                }
+            }
+            return HttpReply;
+        }
 
         //--------  Do CRED_REQ -----
         private HttpTrx Do_CRED_REQ(string DecrypStr, string UserName, string DeviceType)
@@ -309,71 +377,7 @@ namespace AuthenticationAPI.Controllers
             return HttpReply;
         }
 
-        private HttpTrx Do_UUID_RPT(string DecrypStr, string UserName, string DeviceType)
-        {
-            HttpTrx HttpReply = null;
-            string ReplyProcStep = ProcessStep.UUID_ACK.ToString();
-            DUUIDRPT uuidrpt = DeserializeObj._DUUIDRPT(DecrypStr);
-            if (uuidrpt == null)
-            {
-                int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
-            }
-            else
-            {
-
-                //----  Update Information -----
-                SecurityManager.GetRSASecurity(UserName, DeviceType).setClientID = UserName;
-                SecurityManager.GetRSASecurity(UserName, DeviceType).setClientPublicKey = uuidrpt.MobilePublicKey;
-
-                HttpReply = new HttpTrx();
-                DUUIDACK uuidack = new DUUIDACK();
-                try
-                {
-                    //------ Assemble ------
-                    uuidack.ServerName = Configuration["Server:ServerName"];
-                    uuidack.ServicePublicKey = SecurityManager.GetRSASecurity(UserName, DeviceType).PublicKey;
-                    uuidack.TimeStamp = DateTime.Now;
-
-                    string UUIDReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidack);
-                    AuthDES DES = new AuthDES();
-                    string DataContentDES = DES.EncryptDES(UUIDReplyJsonStr);
-
-                    ECS HESC = new ECS();
-                    HESC.Algo = "DES";
-                    HESC.Key = DES.GetKey();
-                    HESC.IV = DES.GetIV();
-
-                    string ECSEncryptRetMsg = string.Empty;
-                    string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                    string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(UserName, DeviceType, HESCJsonStr, out ECSEncryptRetMsg);
-
-                    if (ECSEncryptStr == string.Empty)
-                    {
-                        int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                        HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
-                        HttpReply.ReturnMsg += ", Error Msg = " + ECSEncryptRetMsg;
-                        return HttpReply;
-                    }
-                    else
-                    {
-                        HttpReply = new HttpTrx();
-                        HttpReply.UserName = UserName;
-                        HttpReply.ProcStep = ReplyProcStep;
-                        HttpReply.ReturnCode = 0;
-                        HttpReply.ReturnMsg = string.Empty;
-                        HttpReply.DataContent = DataContentDES;
-                        HttpReply.ECS = ECSEncryptStr;
-                        HttpReply.ECSSign = string.Empty;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, ex);
-                }
-            }
-            return HttpReply;
-        }
+       
 
         private void Do_UUID_ANN( string UserName, string UUID)
         {
@@ -583,6 +587,31 @@ namespace AuthenticationAPI.Controllers
          
 
         }
+
+        private void UpdateCredInfo(string name, string deviceUUID)
+        {
+            var cred = ObjectManager.GetCredInfo(name);
+            cred.DeviceUUID = deviceUUID;
+            ObjectManager.SetCredInfo(name, cred);
+        }
+
+        private string GenerateCredential(string UserName)
+        {
+            /* 未來Credential String 產生規則為
+             * BaseDES Credential Class obtain Content and Sign
+             * Credential Content obtain 
+             * String  Server
+               String Type
+               String  ClientPublicKey
+               Datetime  CreateTime
+               String   expire,
+               Sign with signature RSA Private Key Sign in */
+
+
+
+            return "Abcde12345";
+        }
+
 
     }
 }

@@ -16,6 +16,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using AuthenticationAPI.Manager;
 using AuthenticationAPI.Middleware;
+using AuthenticationAPI.DBContext;
 
 namespace AuthenticationAPI
 {
@@ -36,9 +37,10 @@ namespace AuthenticationAPI
             services.AddSingleton<IMessageManager, Kernel.MessageManager>();
             services.AddSingleton<IQueueManager, Kernel.QueueManager>();
             services.AddSingleton<IObjectManager, Kernel.ObjectManager>();
+            services.AddSingleton<ISecurityManager, SecurityManager>();
+            services.AddSingleton<IService, Service.HelloService>();  // Testing 
             //services.AddHostedService<LDAPManager>();
-        
-            if (Configuration.GetConnectionString("Type") == "My SQL")
+            if (Configuration.GetConnectionString("Provider") =="MY_SQL")
             {
                 services.AddDbContext<DBContext.MetaDBContext>(options => options.UseMySQL(Configuration.GetConnectionString("DefaultConnection")));
             }
@@ -46,11 +48,6 @@ namespace AuthenticationAPI
             {
                 //  這邊預留處理 MS SQL 的部分, 以後設定在這個地方
             }
-
-            // services.AddScoped<IService, Service.AccountCheckService>();
-            // services.AddScoped<IService, Service.MonitorSerialCheckService>();
-            services.AddSingleton<ISecurityManager, SecurityManager>();
-            services.AddSingleton<IService, Service.HelloService>();
 
             //0613  建立 CORS  設定.
             services.AddCors(options =>
@@ -64,23 +61,7 @@ namespace AuthenticationAPI
                     });
             });
 
-            /*
-            var tokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = false,
-                ValidateAudience = false,
-
-                // The signing key must match!
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = signKey.Key,
-
-                // Validate the token expiry
-                ValidateLifetime = true,
-
-                // If you want to allow a certain amount of clock drift, set that here:
-                ClockSkew = TimeSpan.FromMinutes(1),
-            };*/
-
+           
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -109,17 +90,6 @@ namespace AuthenticationAPI
             {
                 options.Filters.Add(new AuthorizeFilter());
             });
-
-            //--- 偷跑先Run First time avoid User Query Slow ------
-            var options = services.BuildServiceProvider().GetRequiredService<DbContextOptions<DBContext.MetaDBContext>>();
-            Task.Run(() =>
-            {
-                using (var dbContext = new DBContext.MetaDBContext(options))
-                {
-                    dbContext.hellowould.FirstOrDefault();
-                }
-            });
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -137,6 +107,12 @@ namespace AuthenticationAPI
           
             app.UseWebSockets(webSocketOptions);
             app.UseMiddleware<WebsocketHandlerMiddleware>();
+
+            //------- First Run Initial Security Manager ------
+            string DBProvider = Configuration.GetConnectionString("Provider");
+            string DBConStr = Configuration.GetConnectionString("DefaultConnection");
+            var SecurityManager =  app.ApplicationServices.GetService<ISecurityManager>();
+            SecurityManager.InitFromDB(DBProvider, DBConStr);
 
             app.UseRouting();
             app.UseAuthentication();
