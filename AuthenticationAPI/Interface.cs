@@ -52,10 +52,11 @@ namespace AuthenticationAPI
 
         public CREDINFO GetCredInfo(string Key);
         public void SetCredInfo(string Key, CREDINFO Obj);
-
         public string GetDeviceUUID(string Key);
         public void SetDeviceUUID(string Key, string uuid);
-       
+        public bool GetRegisterStatus(string Key);
+        public void SetRegisterStatus(string Key, bool status);
+     
     }
 
 
@@ -69,6 +70,7 @@ namespace AuthenticationAPI
         public void InitFromDB(string Type, string ConnectionStr);
         public void UpdateToDB(string username, string devicetype);
         public AuthSecurity GetRSASecurity(string Key, string Type);
+        public AuthSecurity SIGNRSASecurity();
         public void SetRSASecurity(string Key, string Type, AuthSecurity Obj);
         public string EncryptByClientPublicKey(string Key, string Type,string Content, out string returnMsg);
         public string DecryptByPrivateKey(string Key, string Type, string Content);

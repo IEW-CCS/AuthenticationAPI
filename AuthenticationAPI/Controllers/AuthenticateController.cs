@@ -33,15 +33,15 @@ namespace AuthenticationAPI.Controllers
         private readonly IObjectManager ObjectManager;
         private readonly MetaDBContext DBcontext;
 
-        public AuthenticateController(ILogger<LoginController> _logger, IEnumerable<IService> _services, IQueueManager _queuemanager, MetaDBContext _dbcontext, IConfiguration _configuration, ISecurityManager _securitymanager, IObjectManager _objectmanager)
+        public AuthenticateController(ILogger<LoginController> logger, IEnumerable<IService> services, IQueueManager queuemanager, MetaDBContext dbcontext, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
         {
-            Logger = _logger;
-            Services = _services;
-            Configuration = _configuration;
-            QueueManager = _queuemanager;
-            DBcontext = _dbcontext;
-            SecurityManager = _securitymanager;
-            ObjectManager = _objectmanager;
+            Logger = logger;
+            Services = services;
+            Configuration = configuration;
+            QueueManager = queuemanager;
+            DBcontext = dbcontext;
+            SecurityManager = securitymanager;
+            ObjectManager = objectmanager;
 
         }
 
@@ -84,12 +84,6 @@ namespace AuthenticationAPI.Controllers
                 HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, RTCode);
                 return HttpReply;
             }
-            else if (!CheckProcStepCorrect(ProcStep))
-            {
-                int RTCode = (int)HttpAuthErrorCode.ProcStepNotMatch;
-                HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, RTCode);
-                return HttpReply;
-            }
             else
             {
                 int RTCode = 0;
@@ -109,17 +103,13 @@ namespace AuthenticationAPI.Controllers
                             else
                             {
                                 HttpReply = Do_UUID_RPT(DecrypStr, UserName, DeviceType);
-
                             }
-                           
                             break;
 
                         case ProcessStep.CRED_REQ:
-
                             string CREDREQ_RSADecStr = string.Empty;
                             string CREDREQ_RSAReturnMsg = string.Empty;
                             int CREDREQ_RSAReturnCode = 0;
-
                             CREDREQ_RSAReturnCode = SecurityManager.GetRSASecurity(UserName, DeviceType).Decrypt_Check(Msg.ECS, Msg.ECSSign, out CREDREQ_RSADecStr, out CREDREQ_RSAReturnMsg);
                             if (CREDREQ_RSAReturnCode != 0)
                             {
@@ -132,7 +122,6 @@ namespace AuthenticationAPI.Controllers
                                 {
                                     RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                                     HttpReply = this.ReplyNGHttpTrx(ReplyProcessStep, RTCode);
-
                                 }
                                 else
                                 {
@@ -145,6 +134,7 @@ namespace AuthenticationAPI.Controllers
                                     else
                                     {
                                         HttpReply = Do_CRED_REQ(DecrypStr, UserName, DeviceType);
+                                      
                                     }
                                 }
                             }
@@ -324,6 +314,7 @@ namespace AuthenticationAPI.Controllers
             {
                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                 HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
+                return HttpReply;
             }
             else
             {
@@ -332,9 +323,17 @@ namespace AuthenticationAPI.Controllers
                 CCREDPLY CCredReply = new CCREDPLY();
                 try
                 {
+                    string CredentialStr = this.GenerateCredential(UserName);
+                    if (CredentialStr == string.Empty)
+                    {
+                        int RTCode = (int)HttpAuthErrorCode.CreateCredentialError;
+                        HttpReply = this.ReplyNGHttpTrx(ReplyProcStep, RTCode);
+                        return HttpReply;
+                    }
+
                     //------ Assemble ------
                     CCredReply.ServerName =  Configuration["Server:ServerName"];
-                    CCredReply.Credential = this.GetCredential(UserName);
+                    CCredReply.Credential = CredentialStr;
                     CCredReply.TimeStamp = DateTime.Now;
 
                     string CCredReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(CCredReply);
@@ -359,6 +358,7 @@ namespace AuthenticationAPI.Controllers
                     }
                     else
                     {
+                        
                         HttpReply = new HttpTrx();
                         HttpReply.UserName = UserName;
                         HttpReply.ProcStep = ReplyProcStep;
@@ -367,6 +367,14 @@ namespace AuthenticationAPI.Controllers
                         HttpReply.DataContent = DataContentDES;
                         HttpReply.ECS = ECSEncryptStr;
                         HttpReply.ECSSign = string.Empty;
+
+                        if(Do_UUID_ANN(UserName, CredentialStr) ==false)
+                        {
+                            // Logger Do Ann Error .....
+                        }
+
+
+                        return HttpReply;
                     }
                 }
                 catch (Exception ex)
@@ -379,9 +387,10 @@ namespace AuthenticationAPI.Controllers
 
        
 
-        private void Do_UUID_ANN( string UserName, string UUID)
+        private bool Do_UUID_ANN( string UserName,  string Credential)
         {
             WSTrx WebSocketReply = null;
+            string DeviceUUID = ObjectManager.GetDeviceUUID(UserName);
             string ReplyProcStep = ProcessStep.UUID_ANN.ToString();
             string Device_type = DeviceType.CONSOLE.ToString();
 
@@ -389,7 +398,8 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 uuidann.ServerName = Configuration["Server:ServerName"];
-                uuidann.DeviceUUID = UUID;
+                uuidann.DeviceUUID = DeviceUUID;
+                uuidann.Credential = Credential;
                 uuidann.TimeStamp = DateTime.Now;
                 //------ Assemble ------
 
@@ -426,10 +436,11 @@ namespace AuthenticationAPI.Controllers
                     msg.TimeStamp = DateTime.Now;
                     QueueManager.PutMessage(msg);
                 }
+                return true;
             }
             catch
             {
-
+                return false;
             }
         }
 
@@ -496,32 +507,6 @@ namespace AuthenticationAPI.Controllers
             return DES_DecryptStr;
         }
 
-
-        private bool CheckProcStepCorrect(string procStep)
-        {
-            bool StatusCorrect = false;
-            try
-            {
-                ProcessStep PStep = (ProcessStep)Enum.Parse(typeof(ProcessStep), procStep);
-                switch (PStep)
-                {
-                    case ProcessStep.CRED_REQ:
-                    case ProcessStep.UUID_RPT:
-                    case ProcessStep.AREG_CMP:
-                        StatusCorrect = true;
-                        break;
-                    default:
-                        StatusCorrect = false;
-                        break;
-                }
-            }
-            catch
-            {
-                StatusCorrect = false;
-            }
-            return StatusCorrect;
-        }
-
         private string ReplyProcStep(string procStep)
         {
             string ReplyProcStep = string.Empty;
@@ -530,11 +515,11 @@ namespace AuthenticationAPI.Controllers
                 ProcessStep PStep = (ProcessStep)Enum.Parse(typeof(ProcessStep), procStep);
                 switch (PStep)
                 {
-                    case ProcessStep.CRED_REQ:
-                        ReplyProcStep = ProcessStep.CRED_PLY.ToString();
-                        break;
                     case ProcessStep.UUID_RPT:
                         ReplyProcStep = ProcessStep.UUID_ACK.ToString();
+                        break;
+                    case ProcessStep.CRED_REQ:
+                        ReplyProcStep = ProcessStep.CRED_PLY.ToString();
                         break;
                     case ProcessStep.AREG_CMP:
                         ReplyProcStep = ProcessStep.AREG_FIN.ToString();
@@ -552,40 +537,29 @@ namespace AuthenticationAPI.Controllers
         }
 
 
-        private string GetCredential(string UserName)
+        private string GenerateCredential(string UserName)
         {
+            var credObj = ObjectManager.GetCredInfo(UserName);
+            string credJsonStr = JsonSerializer.Serialize(credObj);
+            string signOut = string.Empty;
+            string returnMsg = string.Empty;
 
-            return "Abce123";
-
+            if(SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut, out returnMsg) == 0)
+            {
+                Credential Credition = new Credential();
+                Credition.CredContent = credJsonStr;
+                Credition.CredSign = signOut;
+                return JsonSerializer.Serialize(Credition);
+            }
+            else
+            {
+                return string.Empty;
+            }
         }
-
-        private string GetDeviceUUID(string UserName)
-        {
-
-            return "Abce123";
-
-        }
-
-        private void SetDeviceUUID(string UserName, string UUID)
-        {
-
-
-        }
-
 
         private void SetDeviceRegFinish(string UserName)
         {
-
-
-        }
-
-
-
-        private void testing()
-        {
-
-         
-
+            ObjectManager.SetRegisterStatus(UserName, true);
         }
 
         private void UpdateCredInfo(string name, string deviceUUID)
@@ -594,24 +568,5 @@ namespace AuthenticationAPI.Controllers
             cred.DeviceUUID = deviceUUID;
             ObjectManager.SetCredInfo(name, cred);
         }
-
-        private string GenerateCredential(string UserName)
-        {
-            /* 未來Credential String 產生規則為
-             * BaseDES Credential Class obtain Content and Sign
-             * Credential Content obtain 
-             * String  Server
-               String Type
-               String  ClientPublicKey
-               Datetime  CreateTime
-               String   expire,
-               Sign with signature RSA Private Key Sign in */
-
-
-
-            return "Abcde12345";
-        }
-
-
     }
 }

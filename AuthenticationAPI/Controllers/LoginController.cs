@@ -277,6 +277,7 @@ namespace AuthenticationAPI.Controllers
             cred.UserName = name;
             cred.APPGuid = appGuid;
             cred.APPVersion = appVersion;
+            cred.CreateDateTime = DateTime.Now;
             ObjectManager.SetCredInfo(name, cred);
 
         }

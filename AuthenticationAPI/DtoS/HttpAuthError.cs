@@ -13,7 +13,8 @@ namespace AuthenticationAPI.DtoS
         DeserializeError = 4,
         CheckAuthFailed = 5,
         ECSbyPublicKeyErrorRSA = 6,
-        DecryptECSError = 7
+        DecryptECSError = 7,
+        CreateCredentialError = 8
     }
     public class HttpAuthError
     {
@@ -32,7 +33,8 @@ namespace AuthenticationAPI.DtoS
               { 4, "Deserialize Error" },
               { 5, "Authentication failed" },
               { 6, "Encrypt by Client Public Key Error (RSA)" },
-              { 7, "Descrypt ECS by Private Key Error (RSA)" }
+              { 7, "Descrypt ECS by Private Key Error (RSA)" },
+              { 8, "Create Credential Error" }
 
         };
     }

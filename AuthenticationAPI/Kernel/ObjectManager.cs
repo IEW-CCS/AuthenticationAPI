@@ -16,6 +16,7 @@ namespace AuthenticationAPI.Kernel
         private readonly ILogger _logger;
         private  ConcurrentDictionary<string, CREDINFO> CredInfo = null;
         private  ConcurrentDictionary<string, string> DeviceUUID = null;
+        private  ConcurrentDictionary<string, bool> RegisterFinish = null;
 
 
         public ObjectManager(ILoggerFactory loggerFactory)
@@ -36,7 +37,9 @@ namespace AuthenticationAPI.Kernel
         private void Init()
         {
             CredInfo = new ConcurrentDictionary<string, CREDINFO>();
-        }
+            DeviceUUID = new ConcurrentDictionary<string, string> ();
+            RegisterFinish = new ConcurrentDictionary<string, bool>();
+         }
 
         public CREDINFO GetCredInfo(string Key)
         {
@@ -59,6 +62,20 @@ namespace AuthenticationAPI.Kernel
         public void SetDeviceUUID(string Key, string uuid)
         {
             this.DeviceUUID.AddOrUpdate(Key, uuid, (key, oldvalue) => uuid);
+        }
+
+
+        public bool GetRegisterStatus(string Key)
+        {
+            return this.RegisterFinish.GetOrAdd(Key, key =>
+            {
+                return false;
+            });
+        }
+
+        public void SetRegisterStatus(string Key, bool status)
+        {
+            this.RegisterFinish.AddOrUpdate(Key, status, (key, oldvalue) => status);
         }
 
     }
