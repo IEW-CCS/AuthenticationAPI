@@ -9,7 +9,7 @@ namespace AuthenticationAPI.Kernel
 {
     public class MessageManager : IMessageManager
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceProvider ServiceProvider;
 
         private object _syncObject = new object();
         public bool _stopFlag = false;
@@ -17,12 +17,12 @@ namespace AuthenticationAPI.Kernel
         private Dictionary<string, Connector> _messageMapping;
         private List<MessageMap> _messageMapList ;
 
-        private readonly ILogger _logger;
+        private readonly ILogger Logger;
 
         public MessageManager(ILoggerFactory loggerFactory, IServiceProvider service)
         {
-            _logger = loggerFactory.CreateLogger<MessageManager>();
-            _serviceProvider = service;
+            Logger = loggerFactory.CreateLogger<MessageManager>();
+            ServiceProvider = service;
 
             Init();
         }
@@ -47,11 +47,11 @@ namespace AuthenticationAPI.Kernel
             {
                 Connector item = new Connector();
                 item.Init(objMsg.Obj_id, objMsg.Method);
-                var ServiceCollection = _serviceProvider.GetServices<IService>();
+                var ServiceCollection = ServiceProvider.GetServices<IHttpTrxService>();
                 var obj = ServiceCollection.Where(o => o.ServiceName.Equals(item.ObjectId)).FirstOrDefault();
                 if (obj != null)
                 {
-                    item.Service = (obj) as IService;
+                    item.Service = (obj) as IHttpTrxService;
                     try
                     {
                         _messageMapping.Add(objMsg.Msg_id, item);
@@ -63,7 +63,7 @@ namespace AuthenticationAPI.Kernel
                 }
                 else
                 {
-                    _logger.LogError("Object ID : " + item.ObjectId + " Not Exist in Register Table");
+                    Logger.LogError("Object ID : " + item.ObjectId + " Not Exist in Register Table");
                 }
             }
         }

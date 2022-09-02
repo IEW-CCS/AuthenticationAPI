@@ -19,7 +19,7 @@ namespace AuthenticationAPI.Kernel
 
         private MethodInfo _methodInfo;
 
-        private IService _service;
+        private IHttpTrxService _service;
 
         private object _syncObject = new object();
 
@@ -67,7 +67,7 @@ namespace AuthenticationAPI.Kernel
             }
         }
 
-        public IService Service
+        public IHttpTrxService Service
         {
             get
             {

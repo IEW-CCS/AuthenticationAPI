@@ -38,7 +38,13 @@ namespace AuthenticationAPI
             services.AddSingleton<IQueueManager, Kernel.QueueManager>();
             services.AddSingleton<IObjectManager, Kernel.ObjectManager>();
             services.AddSingleton<ISecurityManager, SecurityManager>();
-            services.AddSingleton<IService, Service.HelloService>();  // Testing 
+
+            services.AddSingleton<IHttpTrxService, Service.APREGREQ_Service>();
+            services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service>();
+            services.AddSingleton<IHttpTrxService, Service.CCREDREQ_Service>();
+            services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service>();
+            services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service>();
+            services.AddSingleton<IHttpTrxService, Service.APVRYCMP_Service>();
             //services.AddHostedService<LDAPManager>();
             if (Configuration.GetConnectionString("Provider") =="MY_SQL")
             {

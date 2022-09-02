@@ -14,7 +14,9 @@ namespace AuthenticationAPI.DtoS
         CheckAuthFailed = 5,
         ECSbyPublicKeyErrorRSA = 6,
         DecryptECSError = 7,
-        CreateCredentialError = 8
+        CreateCredentialError = 8,
+        ServiceNotRegister = 90,
+        ServerProgressError = 91
     }
     public class HttpAuthError
     {
@@ -34,8 +36,9 @@ namespace AuthenticationAPI.DtoS
               { 5, "Authentication failed" },
               { 6, "Encrypt by Client Public Key Error (RSA)" },
               { 7, "Descrypt ECS by Private Key Error (RSA)" },
-              { 8, "Create Credential Error" }
-
+              { 8, "Create Credential Error" },
+              { 90, "Service Not Register, So can be Handle" },
+              { 91, "Service Process Error, So can be Handle" },
         };
     }
 }

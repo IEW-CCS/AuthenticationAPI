@@ -26,14 +26,14 @@ namespace AuthenticationAPI.Middleware
         private Thread _route = null;
         private bool _keepRunning = true;
 
-        public WebsocketHandlerMiddleware(RequestDelegate _next,ILoggerFactory _loggerFactory, IMessageManager _MessageManage, IQueueManager _QueueManager, IConfiguration _Configuration )
+        public WebsocketHandlerMiddleware(RequestDelegate _next,ILoggerFactory loggerFactory, IMessageManager messagemanage, IQueueManager queuemanager, IConfiguration configuration )
         {
             this.next = _next;
 
-            QueueManager = _QueueManager;
-            MessageManager = _MessageManage;
-            Configuration = _Configuration;
-            Logger = _loggerFactory.CreateLogger<WebsocketHandlerMiddleware>();
+            QueueManager = queuemanager;
+            MessageManager = messagemanage;
+            Configuration = configuration;
+            Logger = loggerFactory.CreateLogger<WebsocketHandlerMiddleware>();
 
             _route = new Thread(new ThreadStart(scanSendQueueTask));
             _route.IsBackground = true;
@@ -69,7 +69,6 @@ namespace AuthenticationAPI.Middleware
 
         private void DoSendProc()
         {
-
             // 送出 WebSocket to Client
             AuthenticationAPI.Kernel.MessageTrx msg = QueueManager.GetMessage();
             if (msg != null)
@@ -88,7 +87,7 @@ namespace AuthenticationAPI.Middleware
 
                     if (client != null)
                     {
-                        client.SendMessageAsync($"ID = {ClientID}, Function = {Function}, Body = {MessageBody}.");
+                        client.SendMessageAsync(MessageBody);
                     }
                     else
                     {
@@ -123,7 +122,8 @@ namespace AuthenticationAPI.Middleware
                 //----- 檢查 Exist Token Info --------
                 if (context.Request.Path.Value.StartsWith(Configuration["Server:WSServiceName"]))
                 {
-                    var bearerToken = context.Request.Query["access_token"].ToString();
+                   
+                    var bearerToken = context.Request.Query["access_token"].ToString().Trim();
                     if (!String.IsNullOrEmpty(bearerToken))
                     {
                         context.Request.Headers.Add("Authorization", "Bearer " + bearerToken);

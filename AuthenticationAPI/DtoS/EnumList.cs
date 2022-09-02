@@ -8,7 +8,7 @@ namespace AuthenticationAPI.DtoS
     enum ProcessStep
     {
         AREG_REQ,        //App Regist Request
-        AERG_PLY,        //App Regist Reply
+        AREG_PLY,        //App Regist Reply
         CRED_REQ,        //credential Request
         CRED_PLY,        //credential Reply
         UUID_RPT,        // UUID Report 
@@ -16,8 +16,12 @@ namespace AuthenticationAPI.DtoS
         UUID_ANN,        // UUID Announce
         AREG_CMP,        //App Regist Complete
         AREG_FIN,        //App Regist Finished
-        HSPW_ANN,        //HASH Password Announce
-        VRYP_CMP,         //App Verify Complete
+       
+        AVRY_REQ,        // App Vryope Request
+        AVRY_PLY,        // App Vryope Reply
+        AVRY_CMP,        // App Vryope Complete
+        AVRY_FIN,        // App Vryope Finished
+       
         WSKT_CON,       // WebSocket Connect
         STEP_ERR
     }

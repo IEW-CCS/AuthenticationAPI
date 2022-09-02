@@ -17,13 +17,12 @@ namespace AuthenticationAPI.Manager
     public class LDAPManager : IHostedService
     {
         private int count = 0;
-        private readonly IQueueManager _QueueManager;
-        private readonly IObjectManager _ObjectManager;
-        private readonly ILogger<LoginController> _logger;
-        private readonly IConfiguration _Configuration;
+        private readonly IQueueManager QueueManager;
+        private readonly IObjectManager ObjectManager;
+        private readonly ILogger<LoginController> Logger;
+        private readonly IConfiguration Configuration;
         private Thread _routineTask = null;
         private string _ManagerName = "LDAPManager";
-        private ObjectManager ConstObject;
         private bool _keepRunning = true;
 
 
@@ -39,23 +38,23 @@ namespace AuthenticationAPI.Manager
             }
         }
 
-        public LDAPManager(ILogger<LoginController> logger, IQueueManager QueueManager, IObjectManager ObjectManager, IConfiguration Configuration)
+        public LDAPManager(ILogger<LoginController> logger, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration)
         {
-            _logger = logger;
-            _QueueManager = QueueManager;
-            _ObjectManager = ObjectManager;
-            _Configuration = Configuration;
+            Logger = logger;
+            QueueManager = queuemanager;
+            ObjectManager = objectmanager;
+            Configuration = configuration;
             Init();
         }
 
 
         public void Init()
         {
-            ConstObject = (ObjectManager)_ObjectManager.GetInstance;
+           
 
-            LDAPPath = _Configuration["LDAP:Path"];
-            LDAPUserName = _Configuration["LDAP:AdminName"];
-            LDAPPassWord = _Configuration["LDAP:AdminPassWord"];
+            LDAPPath = Configuration["LDAP:Path"];
+            LDAPUserName = Configuration["LDAP:AdminName"];
+            LDAPPassWord = Configuration["LDAP:AdminPassWord"];
 
         }
 
@@ -64,15 +63,15 @@ namespace AuthenticationAPI.Manager
         {
             while (_keepRunning)
             {
-                MessageTrx tmp =  _QueueManager.GetMessage();
+                MessageTrx tmp =  QueueManager.GetMessage();
                 if(tmp != null)
                 {
-                    _logger.LogInformation("Get Message  = " + tmp.ClientID.ToString());
+                    Logger.LogInformation("Get Message  = " + tmp.ClientID.ToString());
 
                     Thread.Sleep(1);
                 }
    
-                _logger.LogWarning("Count = " + count.ToString());
+                Logger.LogWarning("Count = " + count.ToString());
                 count++;
                 Thread.Sleep(1000);
             }

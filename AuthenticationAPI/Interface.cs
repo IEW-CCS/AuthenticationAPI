@@ -8,12 +8,14 @@ using System.Threading.Tasks;
 namespace AuthenticationAPI
 {
 
-    public interface IService
+    public interface IHttpTrxService
     {
         string ServiceName
         {
             get;
         }
+
+        public HttpTrx HandlepHttpTrx(HttpTrx Msg);
     }
     interface IManagement
     {
@@ -49,14 +51,6 @@ namespace AuthenticationAPI
         {
             get;
         }
-
-        public CREDINFO GetCredInfo(string Key);
-        public void SetCredInfo(string Key, CREDINFO Obj);
-        public string GetDeviceUUID(string Key);
-        public void SetDeviceUUID(string Key, string uuid);
-        public bool GetRegisterStatus(string Key);
-        public void SetRegisterStatus(string Key, bool status);
-     
     }
 
 
@@ -68,7 +62,7 @@ namespace AuthenticationAPI
         }
 
         public void InitFromDB(string Type, string ConnectionStr);
-        public void UpdateToDB(string username, string devicetype);
+        public void UpdateAuthSecurityToDB(string username, string devicetype);
         public AuthSecurity GetRSASecurity(string Key, string Type);
         public AuthSecurity SIGNRSASecurity();
         public void SetRSASecurity(string Key, string Type, AuthSecurity Obj);
@@ -76,7 +70,6 @@ namespace AuthenticationAPI
         public string DecryptByPrivateKey(string Key, string Type, string Content);
         public string Encrypt_Sign(string Key, string Type, string Content, out string signString, out string returnMsg);
         public string Decrypt_Check(string Key, string Type, string Content, string signString, out string returnMsg);
-
 
     }
 

@@ -7,20 +7,20 @@ using AuthenticationAPI.DtoS;
 
 namespace AuthenticationAPI.Service
 {
-    public class HelloService : IService
+    public class HelloService 
     {
 
         private string _SeviceName = "HelloService";
-        private readonly IQueueManager _QueueManager;
-        private readonly IObjectManager _ObjectManager;
+        private readonly IQueueManager QueueManager;
+        private readonly IObjectManager ObjectManager;
 
 
         private  ObjectManager ConstObject;
 
-        public HelloService (IQueueManager QueueManager, IObjectManager ObjectManager)
+        public HelloService (IQueueManager queuemanager, IObjectManager objectmanager)
         {
-            _QueueManager = QueueManager;
-            _ObjectManager = ObjectManager;
+            QueueManager = queuemanager;
+            ObjectManager = objectmanager;
  
             Init();
 
@@ -35,7 +35,7 @@ namespace AuthenticationAPI.Service
 
         public void Init()
         {
-            ConstObject = (ObjectManager)_ObjectManager.GetInstance;
+            ConstObject = (ObjectManager)ObjectManager.GetInstance;
         }
 
         public void Hello(MessageTrx input)
@@ -45,7 +45,7 @@ namespace AuthenticationAPI.Service
             SendOutMsg.Function = input.Function;
            
             SendOutMsg.Data = "This is Wenjou WebSocker and DB Test Test";
-            _QueueManager.PutMessage(SendOutMsg);
+            QueueManager.PutMessage(SendOutMsg);
 
 
 

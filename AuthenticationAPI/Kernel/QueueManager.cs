@@ -8,38 +8,38 @@ namespace AuthenticationAPI.Kernel
 {
     public class QueueManager : IQueueManager
     {
-        private ConcurrentQueue<MessageTrx> _MsgQueueList;
+        private ConcurrentQueue<MessageTrx> _msgQueueList;
      
         public QueueManager()
         {
-            this._MsgQueueList = new ConcurrentQueue<MessageTrx>();
+            this._msgQueueList = new ConcurrentQueue<MessageTrx>();
         }
 
         public void PutMessage(MessageTrx msg)
         {
-            this._MsgQueueList.Enqueue(msg);
+            this._msgQueueList.Enqueue(msg);
         }
 
         public MessageTrx GetMessage()
         {
             MessageTrx result = null;
-            if (this._MsgQueueList.Count > 0)
+            if (this._msgQueueList.Count > 0)
             {
-                this._MsgQueueList.TryDequeue(out result);
+                this._msgQueueList.TryDequeue(out result);
             }
             return result;
         }
 
         public int GetCount()
         {
-            return this._MsgQueueList.Count;
+            return this._msgQueueList.Count;
         }
 
         public void ClearQueue()
         {
-            lock (this._MsgQueueList)
+            lock (this._msgQueueList)
             {
-                this._MsgQueueList.Clear();
+                this._msgQueueList.Clear();
             }
         }
     }

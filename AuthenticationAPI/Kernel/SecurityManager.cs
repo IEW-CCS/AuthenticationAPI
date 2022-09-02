@@ -80,7 +80,7 @@ namespace AuthenticationAPI.Manager
             LoadAuthSecurityFromDB();
         }
    
-        public void UpdateToDB( string username, string devicetype)
+        public void UpdateAuthSecurityToDB( string username, string devicetype)
         {
             var AuthSecurityObject = GetRSASecurity(username, devicetype);
             using (var db = new DBContext.MetaDBContext(Provider, ConnectStr))

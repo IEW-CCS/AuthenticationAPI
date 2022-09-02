@@ -12,16 +12,13 @@ namespace AuthenticationAPI.Kernel
 {
     public class ObjectManager : IObjectManager
     {
+        private  ConcurrentDictionary<string, CREDINFO> _credInfo = null;
+        private  ConcurrentDictionary<string, string> _deviceUUID = null;
+        private  ConcurrentDictionary<string, string> _credential = null;
+        private  ConcurrentDictionary<string, string> _registerStatus = null;
 
-        private readonly ILogger _logger;
-        private  ConcurrentDictionary<string, CREDINFO> CredInfo = null;
-        private  ConcurrentDictionary<string, string> DeviceUUID = null;
-        private  ConcurrentDictionary<string, bool> RegisterFinish = null;
-
-
-        public ObjectManager(ILoggerFactory loggerFactory)
+        public ObjectManager()
         {
-            _logger = loggerFactory.CreateLogger<ObjectManager>();
             Init();
         }
 
@@ -36,46 +33,59 @@ namespace AuthenticationAPI.Kernel
 
         private void Init()
         {
-            CredInfo = new ConcurrentDictionary<string, CREDINFO>();
-            DeviceUUID = new ConcurrentDictionary<string, string> ();
-            RegisterFinish = new ConcurrentDictionary<string, bool>();
-         }
+            _credInfo = new ConcurrentDictionary<string, CREDINFO>();
+            _deviceUUID = new ConcurrentDictionary<string, string> ();
+            _credential = new ConcurrentDictionary<string, string>();
+            _registerStatus = new ConcurrentDictionary<string, string>();
+
+        }
 
         public CREDINFO GetCredInfo(string Key)
         {
-            return this.CredInfo.GetOrAdd(Key, new CREDINFO());
+            return this._credInfo.GetOrAdd(Key, new CREDINFO());
         }
-
         public void SetCredInfo(string Key, CREDINFO Obj)
         {
-            this.CredInfo.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
+            this._credInfo.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
+        }
+
+        public string GetCredential(string Key)
+        {
+            return this._credential.GetOrAdd(Key, key =>
+            {
+                return string.Empty;
+            });
+        }
+        public void SetCredential(string Key, string cred)
+        {
+            this._credential.AddOrUpdate(Key, cred, (key, oldvalue) => cred);
+        }
+        
+       
+        public void SetDeviceUUID(string Key, string uuid)
+        {
+            this._deviceUUID.AddOrUpdate(Key, uuid, (key, oldvalue) => uuid);
         }
 
         public string GetDeviceUUID(string Key)
         {
-            return this.DeviceUUID.GetOrAdd(Key, key =>
+            return this._deviceUUID.GetOrAdd(Key, key =>
             {
                 return string.Empty;
             });
         }
 
-        public void SetDeviceUUID(string Key, string uuid)
+        public string GetRegisterStatus(string Key)
         {
-            this.DeviceUUID.AddOrUpdate(Key, uuid, (key, oldvalue) => uuid);
-        }
-
-
-        public bool GetRegisterStatus(string Key)
-        {
-            return this.RegisterFinish.GetOrAdd(Key, key =>
+            return this._registerStatus.GetOrAdd(Key, key =>
             {
-                return false;
+                return string.Empty; 
             });
         }
 
-        public void SetRegisterStatus(string Key, bool status)
+        public void SetRegisterStatus(string Key, string status)
         {
-            this.RegisterFinish.AddOrUpdate(Key, status, (key, oldvalue) => status);
+            this._registerStatus.AddOrUpdate(Key, status, (key, oldvalue) => status);
         }
 
     }
