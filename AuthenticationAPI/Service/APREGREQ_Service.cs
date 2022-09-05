@@ -234,7 +234,9 @@ namespace AuthenticationAPI.Service
             {
                 using (var db = new DBContext.MetaDBContext(provider, connectstring))
                 {
-                    securityPssword = objDes.EncryptDES(passWord);
+                    //securityPssword = objDes.EncryptDES(passWord);
+                    securityPssword = passWord;    // For Testing  暫時放明碼
+
                     var user = db.auth_info.AsQueryable().Where(o => o.username == userName && o.password == securityPssword).FirstOrDefault();
                     if (user != null)
                     {
@@ -256,7 +258,6 @@ namespace AuthenticationAPI.Service
 
         private void UpdateCredInfo(string name, string appGuid, string appVersion)
         {
-
             var cred = ObjectManagerInstance.GetCredInfo(name);
             cred.ServerName = Configuration["Server:ServerName"];
             cred.UserName = name;
@@ -264,7 +265,6 @@ namespace AuthenticationAPI.Service
             cred.APPVersion = appVersion;
             cred.CreateDateTime = DateTime.Now;
             ObjectManagerInstance.SetCredInfo(name, cred);
-
         }
         private bool IsNumandEG(string word)
         {

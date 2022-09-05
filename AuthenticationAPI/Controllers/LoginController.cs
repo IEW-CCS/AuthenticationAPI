@@ -4,6 +4,7 @@ using System.Text.Json;
 using AuthenticationAPI.DtoS;
 using AuthenticationAPI.Service;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 

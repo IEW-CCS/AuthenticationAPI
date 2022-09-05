@@ -17,6 +17,7 @@ namespace AuthenticationAPI
 
         public HttpTrx HandlepHttpTrx(HttpTrx Msg);
     }
+
     interface IManagement
     {
         string ManageName
@@ -25,6 +26,19 @@ namespace AuthenticationAPI
         }
 
     
+    }
+
+
+    interface ILDAPManagement
+    {
+        string ManageName
+        {
+            get;
+        }
+
+        public void Init();
+        public bool ModifyUserPassword(string username, string password);
+
     }
 
     public interface IQueueManager

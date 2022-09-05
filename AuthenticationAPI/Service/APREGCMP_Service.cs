@@ -22,6 +22,7 @@ namespace AuthenticationAPI.Service
 
         public APREGCMP_Service(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
         {
+            //MetaDBContext dbcontext
             Logger = logger;
             Configuration = configuration;
             SecurityManager = securitymanager;

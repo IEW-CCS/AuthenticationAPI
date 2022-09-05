@@ -25,6 +25,7 @@ namespace AuthenticationAPI.DtoS
         public string APPGuid { get; set; }
         public string APPVersion { get; set; }
         public string DeviceUUID { get; set; }
+        public int Nonce { get; set; }
         public DateTime CreateDateTime { get; set; }
 
         public CREDINFO()
@@ -34,6 +35,7 @@ namespace AuthenticationAPI.DtoS
             APPGuid = string.Empty;
             APPVersion = string.Empty;
             DeviceUUID = string.Empty;
+            Nonce = 0;
         }
 
     }

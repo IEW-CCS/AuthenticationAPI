@@ -104,7 +104,6 @@ namespace AuthenticationAPI.Middleware
         public async Task Invoke(HttpContext context)
         {
             // 透過Web 收HTTP  / WS transaction 進來.
-
             if (context.WebSockets.IsWebSocketRequest)
             {
                 // WEB SOCKET type : 
@@ -209,7 +208,6 @@ namespace AuthenticationAPI.Middleware
                             Message.TimeStamp = DateTime.Now;
 
                             // 進入點一. Message Dispatch (Invoke to Service function)
-
                             MessageManager.MessageDispatch(Message.Function, new object[] { Message });
 
                         }
@@ -269,8 +267,6 @@ namespace AuthenticationAPI.Middleware
             var jwtBacker = new JwtBearerBacker(jwtBearerOptions);
             return jwtBacker.IsJwtValid(jwt);
         }
-
-
         protected async Task<string> GetUserNameFromHttpContextAsync(HttpContext context)
         {
             var jwtBearerOptions = context.RequestServices.GetRequiredService<JwtBearerOptions>() as JwtBearerOptions;
@@ -282,7 +278,6 @@ namespace AuthenticationAPI.Middleware
             var jwtBacker = new JwtBearerBacker(jwtBearerOptions);
             return jwtBacker.JetUserName(jwtHeader);
         }
-
 
         private WSTrx WSTrxReplyNG(int retuenCode)
         {

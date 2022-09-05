@@ -1,20 +1,17 @@
-﻿using AuthenticationAPI.DtoS;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Cors;
 using AuthenticationAPI.DBContext;
 using AuthenticationAPI.Kernel;
 using AuthenticationAPI.Security;
 using AuthenticationAPI.Service;
+using AuthenticationAPI.DtoS;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -29,23 +26,22 @@ namespace AuthenticationAPI.Controllers
         private readonly ILogger Logger;
         private readonly IEnumerable<IHttpTrxService> HttpTrxServices;
         private readonly IConfiguration Configuration;
-        private readonly IQueueManager QueueManager;
         private readonly ISecurityManager SecurityManager;
+        private readonly IQueueManager QueueManager;
         private readonly ObjectManager ObjectManagerInstance;
-        private readonly MetaDBContext DBcontext;
 
-        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, MetaDBContext dbcontext, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
         {
             Logger = logger;
             HttpTrxServices = services;
             Configuration = configuration;
-            QueueManager = queuemanager;
-            DBcontext = dbcontext;
             SecurityManager = securitymanager;
+            QueueManager = queuemanager;
             ObjectManagerInstance = (ObjectManager) objectmanager.GetInstance;
         }
 
         // GET: api/<AuthenticateController>
+        /*
         [HttpGet]
         [EnableCors("CorsPolicy")]
         public IEnumerable<string> Get()
@@ -59,7 +55,7 @@ namespace AuthenticationAPI.Controllers
         public string Get(int id)
         {
             return "value";
-        }
+        }*/
 
         // POST api/<AuthenticateController>
         [HttpPost]
@@ -71,7 +67,6 @@ namespace AuthenticationAPI.Controllers
             string UserName = Msg.UserName;
             string DeviceType = Msg.DeviceType;
             string ProcStep = Msg.ProcStep;
-
 
             if (CheckProcStep(ProcStep) == false)
             {
@@ -116,10 +111,16 @@ namespace AuthenticationAPI.Controllers
                                     HttpReply = HandleCREDREQ.HandlepHttpTrx(Msg);
                                     if(HttpReply.ReturnCode == 0)
                                     {
-                                        string credential = ObjectManagerInstance.GetCredential(UserName);
-                                        if(credential != string.Empty)
+                                        string Credential = ObjectManagerInstance.GetCredential(UserName);
+                                        string DeviceUUID = ObjectManagerInstance.GetDeviceUUID(UserName);
+
+                                        if (Credential != string.Empty && DeviceUUID != string.Empty)
                                         {
-                                            UUIDANN(UserName, credential);
+                                            UUIDANN(UserName, Credential, DeviceUUID);
+                                        }
+                                        else
+                                        {
+                                            Logger.LogError("Credential = " + Credential + "DeviceUUID = " + DeviceUUID + ", With Empty, So Skip Handle.");
                                         }
                                     }
                                 }
@@ -143,7 +144,12 @@ namespace AuthenticationAPI.Controllers
                                     HttpReply = HandleAPVRYREQ.HandlepHttpTrx(Msg);
                                     if (HttpReply.ReturnCode == 0)
                                     {
-                                        LDAPPWChange(UserName, "HashPassword");
+                                        string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
+                                        if(hashPassword != string.Empty)
+                                        {
+                                            LDAPPWChange(UserName, hashPassword);
+                                        }
+                                      
                                     }
                                 }
                                 else
@@ -227,7 +233,6 @@ namespace AuthenticationAPI.Controllers
             return success;
         }
 
-      
         private bool CheckProcStep(string procStep)
         {
             bool result = false;
@@ -255,19 +260,18 @@ namespace AuthenticationAPI.Controllers
             return result;
         }
 
-        private void UUIDANN(string UserName, string Credential)
+
+        private void UUIDANN(string username, string credentialcontent, string DeviceUUID)
         {
             WSTrx WebSocketReply = null;
-            string DeviceUUID = string.Empty; // ObjectManager.GetDeviceUUID(UserName);
             string ReplyProcStep = ProcessStep.UUID_ANN.ToString();
             string Device_type = DeviceType.CONSOLE.ToString();
-
             DUUIDANN uuidann = new DUUIDANN();
             try
             {
                 uuidann.ServerName = Configuration["Server:ServerName"];
                 uuidann.DeviceUUID = DeviceUUID;
-                uuidann.Credential = Credential;
+                uuidann.Credential = credentialcontent;
                 uuidann.TimeStamp = DateTime.Now;
 
                 string UUIDAnnJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidann);
@@ -282,7 +286,7 @@ namespace AuthenticationAPI.Controllers
                 string ECSEncryptRetMsg = string.Empty;
                 string HESCJsonStr = JsonSerializer.Serialize(HESC);
                 string SignStr = string.Empty;
-                string ECSEncryptStr = SecurityManager.Encrypt_Sign(UserName, Device_type, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
+                string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, Device_type, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
 
                 if (ECSEncryptStr != string.Empty && SignStr != string.Empty)
                 {
@@ -293,21 +297,30 @@ namespace AuthenticationAPI.Controllers
                     WebSocketReply.ReturnMsg = string.Empty;
                     WebSocketReply.ECS = ECSEncryptStr;
                     WebSocketReply.ECSSign = SignStr;
-
                     string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
-                    //----------------------------------
-                    MessageTrx msg = new MessageTrx();
-                    msg.ClientID = UserName;
-                    msg.Function = string.Empty; 
-                    msg.Data = WSReplyJsonStr;
-                    msg.TimeStamp = DateTime.Now;
-                    QueueManager.PutMessage(msg);
+                    SendWebsocket(username, string.Empty, WSReplyJsonStr);
                 }
-                
             }
             catch (Exception ex)
             {
-               // Write Log 
+                Logger.LogError("UID ANN Error, Err Msg = " + ex.Message);
+            }
+        }
+
+        private void SendWebsocket( string clientID, string Function, string datacontent)
+        {
+            try
+            {
+                MessageTrx msg = new MessageTrx();
+                msg.ClientID = clientID;
+                msg.Function = Function;
+                msg.Data = datacontent;
+                msg.TimeStamp = DateTime.Now;
+                QueueManager.PutMessage(msg);
+            }
+            catch (Exception Ex)
+            {
+                Logger.LogError("Send Data via WebSocket Error, Err Msg = " + Ex.Message);
             }
         }
 

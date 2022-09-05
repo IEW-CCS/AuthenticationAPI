@@ -14,7 +14,7 @@ using System.DirectoryServices;
 
 namespace AuthenticationAPI.Manager
 {
-    public class LDAPManager : IHostedService
+    public class LDAPManager : ILDAPManagement
     {
         private int count = 0;
         private readonly IQueueManager QueueManager;
@@ -24,6 +24,7 @@ namespace AuthenticationAPI.Manager
         private Thread _routineTask = null;
         private string _ManagerName = "LDAPManager";
         private bool _keepRunning = true;
+        private DirectoryEntry entry = null;
 
 
         private string LDAPPath = string.Empty;  
@@ -50,15 +51,83 @@ namespace AuthenticationAPI.Manager
 
         public void Init()
         {
-           
 
-            LDAPPath = Configuration["LDAP:Path"];
-            LDAPUserName = Configuration["LDAP:AdminName"];
-            LDAPPassWord = Configuration["LDAP:AdminPassWord"];
+            try
+            {
+                LDAPPath = Configuration["LDAP:Path"];
+                LDAPUserName = Configuration["LDAP:AdminName"];
+                LDAPPassWord = Configuration["LDAP:AdminPassWord"];
+
+                entry = new DirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord, AuthenticationTypes.Secure);
+                using (DirectorySearcher deSearch = new DirectorySearcher(entry)) //Search query instance
+                {
+                    SearchResult searchresult = deSearch.FindOne();
+                }
+            }
+            catch(Exception ex)
+            {
+                Logger.LogError("LDAP Init Error, Msg = " + ex.Message);
+            }
+
 
         }
 
 
+
+
+
+
+        private DirectoryEntry GetDirectoryEntry(string path, string username, string password)
+        {
+            return new DirectoryEntry(path, username, password, AuthenticationTypes.Signing);
+        }
+
+        public bool ModifyUserPassword(string username, string password)
+        {
+            bool result = false;
+            try
+            {
+                //DirectoryEntry de = GetDirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord);
+                using (DirectorySearcher deSearch = new DirectorySearcher(entry)) //Search query instance
+                {
+                    deSearch.Filter = "(&(objectClass=organizationalPerson)(cn= " + username + "))"; //Filter by pager (Student number)
+                    SearchResult searchresult = deSearch.FindOne();
+                    using (DirectoryEntry uEntry = searchresult.GetDirectoryEntry())
+                    {
+                        SetPassword(uEntry, password);
+                        result = true;
+                    }
+                }
+            }
+            catch (Exception ex )
+            {
+                result = false;
+            }
+
+            return result;
+        }
+
+        public void SetPassword(DirectoryEntry newuser, string Password)
+        {
+            //DirectoryEntry usr = new DirectoryEntry();
+            //usr.Path = path;
+            //usr.AuthenticationType = AuthenticationTypes.Secure;
+
+            //object[] password = new object[] { SetSecurePassword() };
+            //object ret = usr.Invoke("SetPassword", password);
+            //usr.CommitChanges();
+            //usr.Close();
+
+            newuser.AuthenticationType = AuthenticationTypes.Secure;
+            object[] password = new object[] { Password };
+            object ret = newuser.Invoke("SetPassword", password);
+            newuser.CommitChanges();
+            newuser.Close();
+
+        }
+
+
+        /*
         private void RoutineTask()
         {
             while (_keepRunning)
@@ -123,6 +192,6 @@ namespace AuthenticationAPI.Manager
                 }
             }
             return true;
-        }
+        }*/
     }
 }

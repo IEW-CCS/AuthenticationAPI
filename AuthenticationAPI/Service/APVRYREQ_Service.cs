@@ -7,6 +7,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -177,9 +179,32 @@ namespace AuthenticationAPI.Service
             return true;
         }
 
+        private string GenerateHashPassWord(string username)
+        {
+            Random Rng = new Random((int)DateTime.Now.Millisecond);
+            int R = Rng.Next(1, 255);
+            CREDINFO cred = ObjectManagerInstance.GetCredInfo(username);
+            cred.Nonce = R;
+            string credJson = JsonSerializer.Serialize(cred);
+            string SHAHW = Get_SHA256_Hash(credJson);
+            return SHAHW.Substring(8);
+
+        }
+
+
+        private  string Get_SHA256_Hash(string value)
+        {
+            using var hash = SHA256.Create();
+            var byteArray = hash.ComputeHash(Encoding.UTF8.GetBytes(value));
+            return Convert.ToHexString(byteArray).ToLower();
+        }
+
+
         private string GetHashPassWord(string username)
         {
-            return "Abcde";
+            string hashPassword = GenerateHashPassWord(username);
+            ObjectManagerInstance.SetHashPassword(username, hashPassword);
+            return hashPassword;
         }
     }
 }
