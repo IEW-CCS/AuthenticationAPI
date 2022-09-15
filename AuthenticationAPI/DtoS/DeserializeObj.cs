@@ -74,19 +74,6 @@ namespace AuthenticationAPI.DtoS
             }
             return obj;
         }
-        public static CCREDREQ _CCREDREQ(string DataContent)
-        {
-            CCREDREQ obj = null;
-            try
-            {
-                obj = JsonSerializer.Deserialize<CCREDREQ>(DataContent);
-            }
-            catch
-            {
-                obj = null;
-            }
-            return obj;
-        }
         public static CCREDPLY _CCREDPLY(string DataContent)
         {
             CCREDPLY obj = null;
@@ -126,12 +113,12 @@ namespace AuthenticationAPI.DtoS
             }
             return obj;
         }
-        public static DUUIDANN _DUUIDANN(string DataContent)
+        public static WSUIDANN _DUUIDANN(string DataContent)
         {
-            DUUIDANN obj = null;
+            WSUIDANN obj = null;
             try
             {
-                obj = JsonSerializer.Deserialize<DUUIDANN>(DataContent);
+                obj = JsonSerializer.Deserialize<WSUIDANN>(DataContent);
             }
             catch
             {

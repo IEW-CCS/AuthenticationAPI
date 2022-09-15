@@ -29,6 +29,16 @@ namespace AuthenticationAPI
     }
 
 
+    interface IAuthenticate
+    {
+        string AuthenticateName
+        {
+            get;
+        }
+        bool CheckAuth(object Obj, out string RetMsg);
+    }
+
+
     interface ILDAPManagement
     {
         string ManageName

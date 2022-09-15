@@ -12,33 +12,33 @@ namespace AuthenticationAPI.Service
         public static HttpTrx Trx(string processStep, int returnCode)
         {
             HttpTrx HttpReply = new HttpTrx();
-            HttpReply.UserName = string.Empty;
-            HttpReply.ProcStep = processStep;
-            HttpReply.ReturnCode = returnCode;
-            HttpReply.ReturnMsg = HttpAuthError.ErrorMsg(returnCode);
-            HttpReply.DataContent = string.Empty;
+            HttpReply.username = string.Empty;
+            HttpReply.procstep = processStep;
+            HttpReply.returncode = returnCode ;
+            HttpReply.returnmsg = HttpAuthError.ErrorMsg(returnCode);
+            HttpReply.datacontent = string.Empty;
             return HttpReply;
         }
 
         public static HttpTrx Trx(string processStep, int returnCode, string returnMsg)
         {
             HttpTrx HttpReply = new HttpTrx();
-            HttpReply.UserName = string.Empty;
-            HttpReply.ProcStep = processStep;
-            HttpReply.ReturnCode = returnCode;
-            HttpReply.ReturnMsg = returnMsg;
-            HttpReply.DataContent = string.Empty;
+            HttpReply.username = string.Empty;
+            HttpReply.procstep = processStep;
+            HttpReply.returncode = returnCode;
+            HttpReply.returnmsg = returnMsg;
+            HttpReply.datacontent = string.Empty;
             return HttpReply;
         }
 
         public static HttpTrx Trx (string processStep, Exception ex)
         {
             HttpTrx HttpReply = new HttpTrx();
-            HttpReply.UserName = string.Empty;
-            HttpReply.ProcStep = processStep;
-            HttpReply.ReturnCode = 999;
-            HttpReply.ReturnMsg = ex.Message;
-            HttpReply.DataContent = string.Empty;
+            HttpReply.username = string.Empty;
+            HttpReply.procstep = processStep;
+            HttpReply.returncode = 999;
+            HttpReply.returnmsg = ex.Message;
+            HttpReply.datacontent = string.Empty;
             return HttpReply;
         }
     }

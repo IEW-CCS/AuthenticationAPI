@@ -8,14 +8,12 @@ namespace AuthenticationAPI.DtoS
     public class DUUIDACK
     {
         public string ServerName { get; set; }
-        public string ServicePublicKey { get; set; }
-        public DateTime TimeStamp { get; set; }
+        public string ServerPublicKey { get; set; }
 
         public DUUIDACK()
         {
-            ServerName = string.Empty;
-            ServicePublicKey = string.Empty;
-            TimeStamp = DateTime.Now;
+            ServerName = "";
+            ServerPublicKey = "";
         }
     }
 }

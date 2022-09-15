@@ -22,7 +22,7 @@ namespace AuthenticationAPI.Middleware
         private readonly IQueueManager QueueManager;
         private readonly IMessageManager MessageManager;
         private readonly IConfiguration Configuration;
-        private int _TaskSleepPeriodMs = 1000;
+        private int _TaskSleepPeriodMs = 100;
         private Thread _route = null;
         private bool _keepRunning = true;
 
@@ -118,8 +118,9 @@ namespace AuthenticationAPI.Middleware
                     WebSocket = webSocket
                 };
 
+                string RequestStartPath = string.Concat("/", Configuration["Server:WSServiceName"]);
                 //----- 檢查 Exist Token Info --------
-                if (context.Request.Path.Value.StartsWith(Configuration["Server:WSServiceName"]))
+                if (context.Request.Path.Value.StartsWith(RequestStartPath))
                 {
                    
                     var bearerToken = context.Request.Query["access_token"].ToString().Trim();
@@ -134,6 +135,8 @@ namespace AuthenticationAPI.Middleware
                     try
                     {
                         string ClientID = await this.GetUserNameFromHttpContextAsync(context);
+                        wsClient.Id = ClientID;
+
                         if (ClientID != String.Empty)
                         {
                             WSTrx Ws = this.WSTrxReplyOK();
@@ -184,7 +187,7 @@ namespace AuthenticationAPI.Middleware
         private async Task Handle(WebsocketClient webSocket)
         {
             WebsocketClientCollection.Add(webSocket);
-            Logger.LogInformation($"Websocket client added.");
+            Logger.LogInformation($"Websocket client added Client ID = " + webSocket.Id);
 
             WebSocketReceiveResult result = null;
             do
@@ -282,7 +285,7 @@ namespace AuthenticationAPI.Middleware
         private WSTrx WSTrxReplyNG(int retuenCode)
         {
             WSTrx WSReply = new WSTrx();
-            WSReply.ProcStep = ProcessStep.WSKT_CON.ToString();
+            WSReply.ProcStep = ProcessStep.WCON_PLY.ToString();
             WSReply.ReturnCode = retuenCode;
             WSReply.ReturnMsg = WSAuthError.ErrorMsg(retuenCode);
             WSReply.DataContent = string.Empty;
@@ -292,7 +295,7 @@ namespace AuthenticationAPI.Middleware
         private WSTrx WSTrxReplyOK()
         {
             WSTrx WSReply = new WSTrx();
-            WSReply.ProcStep = ProcessStep.WSKT_CON.ToString();
+            WSReply.ProcStep = ProcessStep.WCON_PLY.ToString();
             WSReply.ReturnCode = 0;
             WSReply.ReturnMsg = "Login Success";
             WSReply.DataContent = string.Empty;

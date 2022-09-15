@@ -20,7 +20,6 @@ namespace AuthenticationAPI.DtoS
     }
     public class CREDINFO
     {
-        public string ServerName { get; set; }
         public string UserName { get; set; }
         public string APPGuid { get; set; }
         public string APPVersion { get; set; }
@@ -30,13 +29,11 @@ namespace AuthenticationAPI.DtoS
 
         public CREDINFO()
         {
-            ServerName = string.Empty;
             UserName = string.Empty;
             APPGuid = string.Empty;
             APPVersion = string.Empty;
             DeviceUUID = string.Empty;
             Nonce = 0;
         }
-
     }
 }

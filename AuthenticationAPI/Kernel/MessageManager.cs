@@ -36,8 +36,8 @@ namespace AuthenticationAPI.Kernel
         private void CreateMessageMap()
         {
             _messageMapList = new List<MessageMap>();
-            _messageMapList.Add(new MessageMap("WS_LOGIN", "HelloService", "Hello"));
-            _messageMapList.Add(new MessageMap("WS_LOGIN2", "HelloService", "Hello2"));
+            //_messageMapList.Add(new MessageMap("WS_LOGIN", "HelloService", "Hello"));
+            //_messageMapList.Add(new MessageMap("WS_LOGIN2", "HelloService", "Hello2"));
 
         }
         private void MessageMap_Registered()

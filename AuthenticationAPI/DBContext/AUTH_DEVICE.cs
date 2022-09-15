@@ -8,8 +8,6 @@ namespace AuthenticationAPI.DBContext
     public class AUTH_DEVICE
     {
         public int id { get; set; }
-        public string username { get; set; }
-        public string deviceuuid { get; set; }
-        public string credential { get; set; }
+        public string device { get; set; } 
     }
 }

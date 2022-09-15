@@ -41,8 +41,8 @@ namespace AuthenticationAPI.Service
             HttpTrx HttpReply = null;
 
             string _replyProcessStep = ProcessStep.AVRY_FIN.ToString();
-            string _userName = Msg.UserName;
-            string _deviceType = Msg.DeviceType;
+            string _userName = Msg.username;
+            string _deviceType = Msg.devicetype;
 
             if (_userName == string.Empty)
             {
@@ -54,7 +54,7 @@ namespace AuthenticationAPI.Service
             {
                 string DecryptECS = string.Empty;
                 string ReturnMsg = string.Empty;
-                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ECS, Msg.ECSSign, out DecryptECS, out ReturnMsg);
+                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
                 if (ReturnCode != 0)
                 {
                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, ReturnCode, ReturnMsg);
@@ -71,7 +71,7 @@ namespace AuthenticationAPI.Service
                     }
                     else
                     {
-                        string DecrypContent = this.DecryptDESData(HESC.Key, HESC.IV, Msg.DataContent);
+                        string DecrypContent = this.DecryptDESData(HESC.Key, HESC.IV, Msg.datacontent);
                         if (DecrypContent == string.Empty)
                         {
                             int RTCode = (int)HttpAuthErrorCode.DecryptError;
@@ -114,13 +114,13 @@ namespace AuthenticationAPI.Service
             try
             {
                 HttpReply = new HttpTrx();
-                HttpReply.UserName = username;
-                HttpReply.ProcStep = _replyProcessStep;
-                HttpReply.ReturnCode = 0;
-                HttpReply.ReturnMsg = string.Empty;
-                HttpReply.DataContent = string.Empty;
-                HttpReply.ECS = string.Empty;
-                HttpReply.ECSSign = string.Empty;
+                HttpReply.username = username;
+                HttpReply.procstep = _replyProcessStep;
+                HttpReply.returncode = 0;
+                HttpReply.returnmsg = string.Empty;
+                HttpReply.datacontent = string.Empty;
+                HttpReply.ecs = string.Empty;
+                HttpReply.ecssign = string.Empty;
             }
             catch (Exception ex)
             {

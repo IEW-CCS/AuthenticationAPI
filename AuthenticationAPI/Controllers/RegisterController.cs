@@ -12,6 +12,7 @@ using AuthenticationAPI.Kernel;
 using AuthenticationAPI.Security;
 using AuthenticationAPI.Service;
 using AuthenticationAPI.DtoS;
+using Microsoft.AspNetCore.Authorization;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -21,7 +22,8 @@ namespace AuthenticationAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [EnableCors("CorsPolicy")]
-    public class AuthenticateController : ControllerBase
+    [Authorize(Roles = "Administrator, Register")]
+    public class RegisterController : ControllerBase
     {
         private readonly ILogger Logger;
         private readonly IEnumerable<IHttpTrxService> HttpTrxServices;
@@ -30,7 +32,7 @@ namespace AuthenticationAPI.Controllers
         private readonly IQueueManager QueueManager;
         private readonly ObjectManager ObjectManagerInstance;
 
-        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
+        public RegisterController(ILogger<RegisterController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
         {
             Logger = logger;
             HttpTrxServices = services;
@@ -40,23 +42,6 @@ namespace AuthenticationAPI.Controllers
             ObjectManagerInstance = (ObjectManager) objectmanager.GetInstance;
         }
 
-        // GET: api/<AuthenticateController>
-        /*
-        [HttpGet]
-        [EnableCors("CorsPolicy")]
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value" };
-        }
-
-        // GET api/<AuthenticateController>/5
-        [HttpGet("{id}")]
-        [EnableCors("CorsPolicy")]
-        public string Get(int id)
-        {
-            return "value";
-        }*/
-
         // POST api/<AuthenticateController>
         [HttpPost]
         [EnableCors("CorsPolicy")]
@@ -64,9 +49,9 @@ namespace AuthenticationAPI.Controllers
         {
 
             HttpTrx HttpReply = null;
-            string UserName = Msg.UserName;
-            string DeviceType = Msg.DeviceType;
-            string ProcStep = Msg.ProcStep;
+            string UserName = Msg.username;
+            string DeviceType = Msg.devicetype;
+            string ProcStep = Msg.procstep;
 
             if (CheckProcStep(ProcStep) == false)
             {
@@ -84,12 +69,15 @@ namespace AuthenticationAPI.Controllers
                     {
                         case ProcessStep.UUID_RPT:
                             {
-                                var HandleDUUIDRPT = HttpTrxServices.Where(s => s.ServiceName == "DUUIDRPT").FirstOrDefault();
+                                var HandleDUUIDRPT = HttpTrxServices.Where(s => s.ServiceName == "DUUIDRPT2").FirstOrDefault();
                                 if (HandleDUUIDRPT != null)
                                 {
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleDUUIDRPT.HandlepHttpTrx(Msg);
+
+                                    string logg = JsonSerializer.Serialize(HttpReply);
+                                    string abc = "123";
                                 }
                                 else
                                 {
@@ -103,24 +91,22 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.CRED_REQ:
                             {
-                                var HandleCREDREQ = HttpTrxServices.Where(s => s.ServiceName == "CCREDREQ").FirstOrDefault();
+                                var HandleCREDREQ = HttpTrxServices.Where(s => s.ServiceName == "CCREDREQ2").FirstOrDefault();
                                 if (HandleCREDREQ != null)
                                 {
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleCREDREQ.HandlepHttpTrx(Msg);
-                                    if(HttpReply.ReturnCode == 0)
+                                    if(HttpReply.returncode == 0)
                                     {
-                                        string Credential = ObjectManagerInstance.GetCredential(UserName);
-                                        string DeviceUUID = ObjectManagerInstance.GetDeviceUUID(UserName);
-
-                                        if (Credential != string.Empty && DeviceUUID != string.Empty)
+                                        Credential Cred = ObjectManagerInstance.GetCredential(UserName);
+                                        if (Cred != null )
                                         {
-                                            UUIDANN(UserName, Credential, DeviceUUID);
+                                            WebSocketUIDAnnounce(UserName, Cred);
                                         }
                                         else
                                         {
-                                            Logger.LogError("Credential = " + Credential + "DeviceUUID = " + DeviceUUID + ", With Empty, So Skip Handle.");
+                                            Logger.LogError("User = " + UserName + "Credential Information is Empty , With Empty, So Skip Handle.");
                                         }
                                     }
                                 }
@@ -142,7 +128,7 @@ namespace AuthenticationAPI.Controllers
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleAPVRYREQ.HandlepHttpTrx(Msg);
-                                    if (HttpReply.ReturnCode == 0)
+                                    if (HttpReply.returncode == 0)
                                     {
                                         string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
                                         if(hashPassword != string.Empty)
@@ -261,50 +247,70 @@ namespace AuthenticationAPI.Controllers
         }
 
 
-        private void UUIDANN(string username, string credentialcontent, string DeviceUUID)
+
+        private void WebSocketUIDAnnounce(string username, Credential credentialcontent)
         {
             WSTrx WebSocketReply = null;
-            string ReplyProcStep = ProcessStep.UUID_ANN.ToString();
+            string ReplyProcStep = ProcessStep.WUID_ANN.ToString();
             string Device_type = DeviceType.CONSOLE.ToString();
-            DUUIDANN uuidann = new DUUIDANN();
-            try
-            {
-                uuidann.ServerName = Configuration["Server:ServerName"];
-                uuidann.DeviceUUID = DeviceUUID;
-                uuidann.Credential = credentialcontent;
-                uuidann.TimeStamp = DateTime.Now;
 
-                string UUIDAnnJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidann);
-                AuthDES DES = new AuthDES();
-                string DataContentDES = DES.EncryptDES(UUIDAnnJsonStr);
+            WSUIDANN wsuidann = new WSUIDANN();
+            wsuidann.Credential = credentialcontent.CredContent;
+            wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
+            string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);
 
-                ECS HESC = new ECS();
-                HESC.Algo = "DES";
-                HESC.Key = DES.GetKey();
-                HESC.IV = DES.GetIV();
+            WebSocketReply = new WSTrx();
+            WebSocketReply.DataContent = Datacontent;
+            WebSocketReply.ProcStep = ReplyProcStep;
+            WebSocketReply.ReturnCode = 0;
+            WebSocketReply.ReturnMsg = string.Empty;
+            WebSocketReply.ECS = string.Empty;
+            WebSocketReply.ECSSign = string.Empty; ;
+            string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
+            SendWebsocket(username, string.Empty, WSReplyJsonStr);
 
-                string ECSEncryptRetMsg = string.Empty;
-                string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string SignStr = string.Empty;
-                string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, Device_type, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
 
-                if (ECSEncryptStr != string.Empty && SignStr != string.Empty)
-                {
-                    WebSocketReply = new WSTrx();
-                    WebSocketReply.DataContent = DataContentDES;
-                    WebSocketReply.ProcStep = ReplyProcStep;
-                    WebSocketReply.ReturnCode = 0;
-                    WebSocketReply.ReturnMsg = string.Empty;
-                    WebSocketReply.ECS = ECSEncryptStr;
-                    WebSocketReply.ECSSign = SignStr;
-                    string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
-                    SendWebsocket(username, string.Empty, WSReplyJsonStr);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("UID ANN Error, Err Msg = " + ex.Message);
-            }
+
+
+            /*  20220915 封存
+             * try
+               {
+                   WSUIDANN wsuidann = new WSUIDANN();
+                   wsuidann.Credential = credentialcontent.CredContent;
+                   wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
+                   string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);
+
+                   string UUIDAnnJsonStr = System.Text.Json.JsonSerializer.Serialize(wsuidann);
+                   AuthDES DES = new AuthDES();
+                   string DataContentDES = DES.EncryptDES(UUIDAnnJsonStr);
+
+                   ECS HESC = new ECS();
+                   HESC.Algo = "DES";
+                   HESC.Key = DES.GetKey();
+                   HESC.IV = DES.GetIV();
+
+                   string ECSEncryptRetMsg = string.Empty;
+                   string HESCJsonStr = JsonSerializer.Serialize(HESC);
+                   string SignStr = string.Empty;
+                   string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, Device_type, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
+
+                   if (ECSEncryptStr != string.Empty && SignStr != string.Empty)
+                   {
+                       WebSocketReply = new WSTrx();
+                       WebSocketReply.DataContent = DataContentDES;
+                       WebSocketReply.ProcStep = ReplyProcStep;
+                       WebSocketReply.ReturnCode = 0;
+                       WebSocketReply.ReturnMsg = string.Empty;
+                       WebSocketReply.ECS = ECSEncryptStr;
+                       WebSocketReply.ECSSign = SignStr;
+                       string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
+                       SendWebsocket(username, string.Empty, WSReplyJsonStr);
+                   }
+               }
+               catch (Exception ex)
+               {
+                   Logger.LogError("UID ANN Error, Err Msg = " + ex.Message);
+               }*/
         }
 
         private void SendWebsocket( string clientID, string Function, string datacontent)
@@ -326,8 +332,28 @@ namespace AuthenticationAPI.Controllers
 
         private void LDAPPWChange(string UserName, string hashPassword)
         {
-
+            //  Call LDAP Change Password Function
 
         }
+
+
+
+
+        // GET: api/<AuthenticateController>
+        /*
+        [HttpGet]
+        [EnableCors("CorsPolicy")]
+        public IEnumerable<string> Get()
+        {
+            return new string[] { "value" };
+        }
+
+        // GET api/<AuthenticateController>/5
+        [HttpGet("{id}")]
+        [EnableCors("CorsPolicy")]
+        public string Get(int id)
+        {
+            return "value";
+        }*/
     }
 }

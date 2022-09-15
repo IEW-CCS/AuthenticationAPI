@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.DirectoryServices;
+using System.Text.Json;
 
 namespace AuthenticationAPI.Manager
 {
@@ -25,6 +26,8 @@ namespace AuthenticationAPI.Manager
         private string _ManagerName = "LDAPManager";
         private bool _keepRunning = true;
         private DirectoryEntry entry = null;
+        private readonly ISecurityManager SecurityManager;
+
 
 
         private string LDAPPath = string.Empty;  
@@ -39,26 +42,25 @@ namespace AuthenticationAPI.Manager
             }
         }
 
-        public LDAPManager(ILogger<LoginController> logger, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration)
+        public LDAPManager(ILogger<LoginController> logger, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
         {
             Logger = logger;
             QueueManager = queuemanager;
             ObjectManager = objectmanager;
             Configuration = configuration;
+            SecurityManager = securitymanager;
             Init();
         }
 
 
         public void Init()
         {
-
             try
             {
                 LDAPPath = Configuration["LDAP:Path"];
                 LDAPUserName = Configuration["LDAP:AdminName"];
                 LDAPPassWord = Configuration["LDAP:AdminPassWord"];
-
-                entry = new DirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord, AuthenticationTypes.Secure);
+                entry = new DirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord, AuthenticationTypes.None);
                 using (DirectorySearcher deSearch = new DirectorySearcher(entry)) //Search query instance
                 {
                     SearchResult searchresult = deSearch.FindOne();
@@ -69,9 +71,47 @@ namespace AuthenticationAPI.Manager
                 Logger.LogError("LDAP Init Error, Msg = " + ex.Message);
             }
 
-
         }
 
+
+        private string GenerateCredential(string username)
+        {
+            // Testing 
+            AuthenticationAPI.DtoS.CREDINFO credInfo = new AuthenticationAPI.DtoS.CREDINFO();
+            credInfo.UserName = "james001";
+            credInfo.APPGuid = "Enter";
+            credInfo.APPVersion = "1.0.0.0";
+            credInfo.Nonce = 0;
+
+      
+
+            string credJsonStr = JsonSerializer.Serialize(credInfo);
+            string signOut = string.Empty;
+            string signOut1 = string.Empty;
+            string signOut2 = string.Empty;
+
+
+            int i1 = SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut1, out string returnMsgOut1);
+
+           int i2 = SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut2, out string returnMsgOut2);
+
+
+            int r1 = SecurityManager.SIGNRSASecurity().CheckSignString(credJsonStr, signOut1, out string checkReturn1);
+
+            int r2 = SecurityManager.SIGNRSASecurity().CheckSignString(credJsonStr, signOut2, out string checkReturn2);
+
+
+            string Credential = string.Empty;
+            if (SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut, out string returnMsgOut) == 0)
+            {
+                Credential = signOut;
+            }
+            else
+            {
+                Credential = string.Empty;
+            }
+            return Credential;
+        }
 
 
 
@@ -85,16 +125,36 @@ namespace AuthenticationAPI.Manager
         public bool ModifyUserPassword(string username, string password)
         {
             bool result = false;
+
             try
             {
                 //DirectoryEntry de = GetDirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord);
                 using (DirectorySearcher deSearch = new DirectorySearcher(entry)) //Search query instance
                 {
-                    deSearch.Filter = "(&(objectClass=organizationalPerson)(cn= " + username + "))"; //Filter by pager (Student number)
+                    // deSearch.Filter = "(&(objectClass=organizationalPerson)(cn=" + cnPath + "))"; //Filter by pager (Student number)
+                    deSearch.Filter = string.Format("(&(uid={0}))", username); 
+                    deSearch.SearchScope = SearchScope.Subtree;
                     SearchResult searchresult = deSearch.FindOne();
                     using (DirectoryEntry uEntry = searchresult.GetDirectoryEntry())
                     {
-                        SetPassword(uEntry, password);
+
+                        foreach (string property in uEntry.Properties.PropertyNames)
+                        {
+                            string value = uEntry.Properties[property][0].ToString();
+
+                            Logger.LogInformation(property + ":" + value);
+       
+                        }
+
+                        uEntry.InvokeSet("mail", "James01@gmail.com");
+                        uEntry.InvokeSet("userPassword", "HelloJames");
+
+                        uEntry.CommitChanges();
+                        uEntry.Close();
+
+
+
+                        // SetPassword(uEntry, password);
                         result = true;
                     }
                 }
@@ -107,24 +167,7 @@ namespace AuthenticationAPI.Manager
             return result;
         }
 
-        public void SetPassword(DirectoryEntry newuser, string Password)
-        {
-            //DirectoryEntry usr = new DirectoryEntry();
-            //usr.Path = path;
-            //usr.AuthenticationType = AuthenticationTypes.Secure;
-
-            //object[] password = new object[] { SetSecurePassword() };
-            //object ret = usr.Invoke("SetPassword", password);
-            //usr.CommitChanges();
-            //usr.Close();
-
-            newuser.AuthenticationType = AuthenticationTypes.Secure;
-            object[] password = new object[] { Password };
-            object ret = newuser.Invoke("SetPassword", password);
-            newuser.CommitChanges();
-            newuser.Close();
-
-        }
+     
 
 
         /*

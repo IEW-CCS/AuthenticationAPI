@@ -41,8 +41,8 @@ namespace AuthenticationAPI.Service
             HttpTrx HttpReply = null;
 
             string _replyProcessStep = ProcessStep.UUID_ACK.ToString();
-            string _userName = Msg.UserName;
-            string _deviceType = Msg.DeviceType;
+            string _userName = Msg.username;
+            string _deviceType = Msg.devicetype;
 
             if (_userName == string.Empty)
             {
@@ -52,7 +52,7 @@ namespace AuthenticationAPI.Service
             }
             else
             {
-                string DecrypStr = this.DecryptBaseDESData(Msg.DataContent);
+                string DecrypStr = this.DecryptBaseDESData(Msg.datacontent);
                 if (DecrypStr == string.Empty)
                 {
                     int RTCode = (int)HttpAuthErrorCode.DecryptError;
@@ -70,7 +70,6 @@ namespace AuthenticationAPI.Service
                     }
                     else
                     {
-
                         if (Handle_DUUIDRPT(_userName, _deviceType, uuidrpt) == false)
                         {
                             int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
@@ -96,8 +95,8 @@ namespace AuthenticationAPI.Service
             try
             {
                 uuidack.ServerName = Configuration["Server:ServerName"];
-                uuidack.ServicePublicKey = SecurityManager.GetRSASecurity(username, devicetype).PublicKey;
-                uuidack.TimeStamp = DateTime.Now;
+                uuidack.ServerPublicKey = SecurityManager.GetRSASecurity(username, devicetype).PublicKey;
+ 
 
                 string UUIDReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidack);
                 AuthDES DES = new AuthDES();
@@ -116,19 +115,19 @@ namespace AuthenticationAPI.Service
                 {
                     int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                    HttpReply.ReturnMsg += ", Error Msg = " + ECSEncryptRetMsg;
+                    HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
                     return HttpReply;
                 }
                 else
                 {
                     HttpReply = new HttpTrx();
-                    HttpReply.UserName = username;
-                    HttpReply.ProcStep = _replyProcessStep;
-                    HttpReply.ReturnCode = 0;
-                    HttpReply.ReturnMsg = string.Empty;
-                    HttpReply.DataContent = DataContentDES;
-                    HttpReply.ECS = ECSEncryptStr;
-                    HttpReply.ECSSign = string.Empty;
+                    HttpReply.username = username;
+                    HttpReply.procstep = _replyProcessStep;
+                    HttpReply.returncode = 0;
+                    HttpReply.returnmsg = string.Empty;
+                    HttpReply.datacontent = DataContentDES;
+                    HttpReply.ecs = ECSEncryptStr;
+                    HttpReply.ecssign = string.Empty;
                 }
             }
             catch (Exception ex)
@@ -163,7 +162,7 @@ namespace AuthenticationAPI.Service
                 SecurityManager.GetRSASecurity(username, devicetype).ClientID = username;
                 SecurityManager.GetRSASecurity(username, devicetype).ClientPublicKey = uuidrpt.MobilePublicKey;
                 SecurityManager.UpdateAuthSecurityToDB(username, devicetype);
-                ObjectManagerInstance.SetDeviceUUID(username, uuidrpt.DeviceUUID);
+                ObjectManagerInstance.SetDeviceUUID(username, uuidrpt.DeviceUUIDJSon);
                 result = true;
             }
             catch (Exception ex)

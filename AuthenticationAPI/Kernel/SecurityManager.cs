@@ -191,6 +191,11 @@ namespace AuthenticationAPI.Manager
                 }
                 //------- Insert to Dict -----
                 AuthSecurity AuthSecu = new AuthSecurity(signRSA.item1, signRSA.item2);
+
+                //---Test 20220906
+                AuthSecu.ClientID = SIGNRSA;
+                AuthSecu.ClientPublicKey = signRSA.item2;
+
                 this.RSADict.AddOrUpdate(SIGNRSA, AuthSecu, (key, oldvalue) => AuthSecu);
             }
         }
@@ -233,6 +238,7 @@ namespace AuthenticationAPI.Manager
                 }
                 //------- Insert to Dict -----
                 AuthSecu = new AuthSecurity(signRSA.item1, signRSA.item2);
+                AuthSecu.ClientPublicKey = signRSA.item2;
                 this.RSADict.AddOrUpdate(SIGNRSA, AuthSecu, (key, oldvalue) => AuthSecu);
                 return AuthSecu;
             }

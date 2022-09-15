@@ -12,7 +12,6 @@ namespace AuthenticationAPI.DtoS
         public string WSServiceURL { get; set; }
         public string HttpToken { get; set; }
         public string ServerRSAPublicKey { get; set; }
-        public DateTime TimeStamp { get; set; }
 
         public APREGPLY()
         {
@@ -21,7 +20,6 @@ namespace AuthenticationAPI.DtoS
             WSServiceURL = string.Empty;
             HttpToken = string.Empty;
             ServerRSAPublicKey = string.Empty;
-            TimeStamp = DateTime.Now;
          }
     }
 }

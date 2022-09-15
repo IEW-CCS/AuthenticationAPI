@@ -152,6 +152,7 @@ namespace AuthenticationAPI.Security
                 {
                     //進行簽章(假設我們使用SHA256)
                     RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+                    rsa.FromXmlString(_objAuthRSA.privateKey);
                     byte[] plainText = Encoding.Unicode.GetBytes(rawContent);
                     byte[] signText = rsa.SignData(plainText, new SHA256CryptoServiceProvider());
                     signString = Convert.ToBase64String(signText);
@@ -171,7 +172,7 @@ namespace AuthenticationAPI.Security
         public int CheckSignString(string DataString, string signString, out string returnMsg)
         {
             byte[] DataText = Encoding.Unicode.GetBytes(DataString);
-            byte[] signText = Encoding.Unicode.GetBytes(signString);
+            byte[] signText = System.Convert.FromBase64String(signString);
             returnMsg = string.Empty;
             int returnCode = 0;
             if (_clientPublicKey == string.Empty)

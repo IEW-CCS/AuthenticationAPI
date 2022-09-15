@@ -12,15 +12,15 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.Service
 {
-    public class CCREDREQ_Service : IHttpTrxService
+    public class CCREDREQ_Service2 : IHttpTrxService
     {
-        private string _SeviceName = "CCREDREQ";
+        private string _SeviceName = "CCREDREQ2";
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private ObjectManager ObjectManagerInstance = null;
 
-        public CCREDREQ_Service(ILogger<CCREDREQ_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public CCREDREQ_Service2(ILogger<CCREDREQ_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
         {
             Logger = logger;
             Configuration = configuration;
@@ -39,6 +39,7 @@ namespace AuthenticationAPI.Service
         public HttpTrx HandlepHttpTrx(HttpTrx Msg)
         {
             HttpTrx HttpReply = null;
+
             string _replyProcessStep = ProcessStep.CRED_PLY.ToString();
             string _userName = Msg.username;
             string _deviceType = Msg.devicetype;
@@ -51,50 +52,18 @@ namespace AuthenticationAPI.Service
             }
             else
             {
-                string DecryptECS = string.Empty;
-                string ReturnMsg = string.Empty;
-                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
-                if (ReturnCode != 0)
+                if (Handle_CCREDREQ(_userName, _deviceType) == false)
                 {
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, ReturnCode, ReturnMsg);
+                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                     return HttpReply;
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
-                    {
-                        int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
-                        HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                        return HttpReply;
-                    }
-                    else
-                    {
-                        if (HESC.Algo != "DES")
-                        {
-                            int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                            return HttpReply;
-                        }
-                        else
-                        {
-                            if (Handle_CCREDREQ(_userName, _deviceType) == false)
-                            {
-                                int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
-                                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                return HttpReply;
-                            }
-                            else
-                            {
-                                GenerateCredential(_userName);
-                                HttpReply = this.ReplyCCREQPLY(_userName, _deviceType);
-                                return HttpReply;
-                            }
-
-                        }
-                    }
+                    GenerateCredential(_userName);
+                    HttpReply = this.ReplyCCREQPLY(_userName, _deviceType);
+                    return HttpReply;
                 }
-
             }
         }
 
@@ -107,6 +76,7 @@ namespace AuthenticationAPI.Service
 
             try
             {
+
                 Credential card = this.ObjectManagerInstance.GetCredential(username);
                 if (card == null)
                 {
@@ -116,38 +86,18 @@ namespace AuthenticationAPI.Service
                 }
 
                 CCredReply.CredentialSign = card.CredSign;
+
                 string CCredReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(CCredReply);
-                AuthDES DES = new AuthDES();
-                string DataContentDES = DES.EncryptDES(CCredReplyJsonStr);
+                HttpReply = new HttpTrx();
+                HttpReply.username = username;
+                HttpReply.procstep = _replyProcessStep;
+                HttpReply.returncode = 0;
+                HttpReply.returnmsg = string.Empty;
+                HttpReply.datacontent = CCredReplyJsonStr;
+                HttpReply.ecs = string.Empty;
+                HttpReply.ecssign = string.Empty;
+                return HttpReply;
 
-                ECS HESC = new ECS();
-                HESC.Algo = "DES";
-                HESC.Key = DES.GetKey();
-                HESC.IV = DES.GetIV();
-
-                string ECSEncryptRetMsg = string.Empty;
-                string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
-
-                if (ECSEncryptStr == string.Empty)
-                {
-                    int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                    HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
-                    return HttpReply;
-                }
-                else
-                {
-                    HttpReply = new HttpTrx();
-                    HttpReply.username = username;
-                    HttpReply.procstep = _replyProcessStep;
-                    HttpReply.returncode = 0;
-                    HttpReply.returnmsg = string.Empty;
-                    HttpReply.datacontent = DataContentDES;
-                    HttpReply.ecs = ECSEncryptStr;
-                    HttpReply.ecssign = string.Empty;
-                    return HttpReply;
-                }
             }
             catch (Exception ex)
             {
@@ -193,6 +143,7 @@ namespace AuthenticationAPI.Service
             return true;
         }
 
+
         private void GenerateCredential(string username)
         {
             CREDINFO credObj = ObjectManagerInstance.GetCredInfo(username);
@@ -207,7 +158,8 @@ namespace AuthenticationAPI.Service
                 Cred.CredSign = signOut;
                 this.ObjectManagerInstance.SetCredential(username, Cred);
             }
-          
+
         }
+
     }
 }

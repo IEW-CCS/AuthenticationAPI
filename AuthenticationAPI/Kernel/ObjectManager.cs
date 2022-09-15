@@ -14,7 +14,7 @@ namespace AuthenticationAPI.Kernel
     {
         private  ConcurrentDictionary<string, CREDINFO> _credInfo = null;
         private  ConcurrentDictionary<string, string> _deviceUUID = null;
-        private  ConcurrentDictionary<string, string> _credential = null;
+        private  ConcurrentDictionary<string, Credential> _credential = null;
         private  ConcurrentDictionary<string, string> _registerStatus = null;
         private  ConcurrentDictionary<string, string> _hashPassword = null;
 
@@ -37,7 +37,7 @@ namespace AuthenticationAPI.Kernel
         {
             _credInfo = new ConcurrentDictionary<string, CREDINFO>();
             _deviceUUID = new ConcurrentDictionary<string, string> ();
-            _credential = new ConcurrentDictionary<string, string>();
+            _credential = new ConcurrentDictionary<string, Credential>();
             _registerStatus = new ConcurrentDictionary<string, string>();
             _hashPassword = new ConcurrentDictionary<string, string>();
         }
@@ -51,14 +51,19 @@ namespace AuthenticationAPI.Kernel
             this._credInfo.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
         }
 
-        public string GetCredential(string Key)
+        public Credential GetCredential(string Key)
         {
-            return this._credential.GetOrAdd(Key, key =>
+            Credential Cred = null;
+            if (this._credential.TryGetValue(Key, out Cred))
             {
-                return string.Empty;
-            });
+                return Cred;
+            }
+            else
+            {
+                return null;
+            }
         }
-        public void SetCredential(string Key, string cred)
+        public void SetCredential(string Key, Credential cred)
         {
             this._credential.AddOrUpdate(Key, cred, (key, oldvalue) => cred);
         }

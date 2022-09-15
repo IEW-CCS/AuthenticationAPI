@@ -7,25 +7,25 @@ namespace AuthenticationAPI.DtoS
 {
     public class HttpTrx
     {
-        public string UserName { get; set; }
-        public string DeviceType { get; set; }
-        public string ProcStep { get; set; }
-        public int ReturnCode { get; set; }
-        public string ReturnMsg { get; set; }
-        public string DataContent { get; set; }
-        public string ECS { get; set; }            // Encrype with Public Key 
-        public string ECSSign { get; set; }
+        public string username { get; set; }
+        public string devicetype { get; set; }
+        public string procstep { get; set; }
+        public int returncode { get; set; }
+        public string returnmsg { get; set; }
+        public string datacontent { get; set; }
+        public string ecs { get; set; }            // Encrype with Public Key 
+        public string ecssign { get; set; }
 
         public HttpTrx()
         {
-            UserName = string.Empty;
-            DeviceType = string.Empty;
-            ProcStep = string.Empty;
-            ReturnCode = 0;
-            ReturnMsg = string.Empty;
-            DataContent = string.Empty;
-            ECS = string.Empty;
-            ECSSign = string.Empty;
+            username = "";
+            devicetype = "";
+            procstep = "";
+            returncode = 0;
+            returnmsg = "";
+            datacontent = "";
+            ecs = "";
+            ecssign = "";
         }
 
     }

@@ -45,7 +45,12 @@ namespace AuthenticationAPI
             services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service>();
             services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service>();
             services.AddSingleton<IHttpTrxService, Service.APVRYCMP_Service>();
-            services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
+           // services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
+
+            services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.CCREDREQ_Service2>();
+
+
             //services.AddHostedService<LDAPManager>();
             if (Configuration.GetConnectionString("Provider") =="MY_SQL")
             {
@@ -121,10 +126,12 @@ namespace AuthenticationAPI
             var SecurityManager =  app.ApplicationServices.GetService<ISecurityManager>();
             SecurityManager.InitFromDB(DBProvider, DBConStr);
 
-
-            var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
-            LDAPManager.Init();
-            LDAPManager.ModifyUserPassword("VIC", "123456");
+           
+            // for LDAP Testing 20220906 
+          //  var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
+          //  LDAPManager.Init();
+          //  bool result = LDAPManager.ModifyUserPassword("james", "James1234");
+            
 
 
 
