@@ -44,7 +44,7 @@ namespace AuthenticationAPI
             services.AddSingleton<IHttpTrxService, Service.CCREDREQ_Service>();
             services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service>();
             services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service>();
-            services.AddSingleton<IHttpTrxService, Service.APVRYCMP_Service>();
+            services.AddSingleton<IHttpTrxService, Service.APHPWREQ_Service>();
            // services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
 
             services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service2>();

@@ -22,7 +22,7 @@ namespace AuthenticationAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [EnableCors("CorsPolicy")]
-    [Authorize(Roles = "Administrator, Register")]
+    [Authorize(Roles = "Admin, Administrator, Register")]
     public class RegisterController : ControllerBase
     {
         private readonly ILogger Logger;
@@ -72,12 +72,16 @@ namespace AuthenticationAPI.Controllers
                                 var HandleDUUIDRPT = HttpTrxServices.Where(s => s.ServiceName == "DUUIDRPT2").FirstOrDefault();
                                 if (HandleDUUIDRPT != null)
                                 {
+                                    ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
+
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleDUUIDRPT.HandlepHttpTrx(Msg);
 
-                                    string logg = JsonSerializer.Serialize(HttpReply);
-                                    string abc = "123";
+                                    if (HttpReply.returncode == 0)
+                                    {
+                                        ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
+                                    }
                                 }
                                 else
                                 {
@@ -94,11 +98,15 @@ namespace AuthenticationAPI.Controllers
                                 var HandleCREDREQ = HttpTrxServices.Where(s => s.ServiceName == "CCREDREQ2").FirstOrDefault();
                                 if (HandleCREDREQ != null)
                                 {
+                                    ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
+
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleCREDREQ.HandlepHttpTrx(Msg);
-                                    if(HttpReply.returncode == 0)
+                                  
+                                    if (HttpReply.returncode == 0)
                                     {
+                                        ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
                                         Credential Cred = ObjectManagerInstance.GetCredential(UserName);
                                         if (Cred != null )
                                         {
@@ -120,65 +128,25 @@ namespace AuthenticationAPI.Controllers
                                 break;
                             }
 
-                        case ProcessStep.AVRY_REQ:
-                            {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "APVRYREQ").FirstOrDefault();
-                                if (HandleAPVRYREQ != null)
-                                {
-                                    string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
-                                    HttpReply = HandleAPVRYREQ.HandlepHttpTrx(Msg);
-                                    if (HttpReply.returncode == 0)
-                                    {
-                                        string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
-                                        if(hashPassword != string.Empty)
-                                        {
-                                            LDAPPWChange(UserName, hashPassword);
-                                        }
-                                      
-                                    }
-                                }
-                                else
-                                {
-                                    string _replyProcessStep = ProcessStep.AVRY_PLY.ToString();
-                                    Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
-                                    int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                }
-                                break;
-                            }
-
                         case ProcessStep.AREG_CMP:
                             {
                                 var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == "APREGCMP").FirstOrDefault();
                                 if (HandleAREGCMP != null)
                                 {
+                                    ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
+
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleAREGCMP.HandlepHttpTrx(Msg);
+
+                                    if (HttpReply.returncode == 0)
+                                    {
+                                        ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
+                                    }
                                 }
                                 else
                                 {
                                     string _replyProcessStep = ProcessStep.AREG_FIN.ToString();
-                                    Logger.LogInformation("ERROR !! APREGCMP Not Register.");
-                                    int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                }
-                                break;
-                            }
-
-                        case ProcessStep.AVRY_CMP:
-                            {
-                                var HandleAVRYCMP = HttpTrxServices.Where(s => s.ServiceName == "APVRYCMP").FirstOrDefault();
-                                if (HandleAVRYCMP != null)
-                                {
-                                    string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
-                                    HttpReply = HandleAVRYCMP.HandlepHttpTrx(Msg);
-                                }
-                                else
-                                {
-                                    string _replyProcessStep = ProcessStep.AVRY_FIN.ToString();
                                     Logger.LogInformation("ERROR !! APREGCMP Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -230,8 +198,6 @@ namespace AuthenticationAPI.Controllers
                     case ProcessStep.UUID_RPT:
                     case ProcessStep.CRED_REQ:  
                     case ProcessStep.AREG_CMP:
-                    case ProcessStep.AVRY_REQ: 
-                    case ProcessStep.AVRY_CMP:
                         result = true;
                         break;
                     default:
@@ -268,8 +234,6 @@ namespace AuthenticationAPI.Controllers
             WebSocketReply.ECSSign = string.Empty; ;
             string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
             SendWebsocket(username, string.Empty, WSReplyJsonStr);
-
-
 
 
             /*  20220915 封存
@@ -329,14 +293,6 @@ namespace AuthenticationAPI.Controllers
                 Logger.LogError("Send Data via WebSocket Error, Err Msg = " + Ex.Message);
             }
         }
-
-        private void LDAPPWChange(string UserName, string hashPassword)
-        {
-            //  Call LDAP Change Password Function
-
-        }
-
-
 
 
         // GET: api/<AuthenticateController>

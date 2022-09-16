@@ -112,7 +112,9 @@ namespace AuthenticationAPI.Service
             bool result = false;
             try
             {
-                ObjectManagerInstance.SetDeviceUUID(username, uuidrpt.DeviceUUIDJSon);
+                var objCredential = ObjectManagerInstance.GetCredInfo(username);
+                objCredential.DeviceUUID = uuidrpt.DeviceUUIDJSon;
+                ObjectManagerInstance.SetCredInfo(username, objCredential);
                 result = true;
             }
             catch (Exception ex)

@@ -77,7 +77,7 @@ namespace AuthenticationAPI.Manager
         private string GenerateCredential(string username)
         {
             // Testing 
-            AuthenticationAPI.DtoS.CREDINFO credInfo = new AuthenticationAPI.DtoS.CREDINFO();
+            AuthenticationAPI.DtoS.CRED_INFO credInfo = new AuthenticationAPI.DtoS.CRED_INFO();
             credInfo.UserName = "james001";
             credInfo.APPGuid = "Enter";
             credInfo.APPVersion = "1.0.0.0";

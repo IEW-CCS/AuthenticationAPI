@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class APREGCMP
+    public class AVCONREQ
     {
-        public string Result { get; set; }
-        public APREGCMP()
+        public string DeviceCode { get; set; }
+       
+        public AVCONREQ()
         {
-            Result = string.Empty;
+            DeviceCode = string.Empty;
         }
     }
 }

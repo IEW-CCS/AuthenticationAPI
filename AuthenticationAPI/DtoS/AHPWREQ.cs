@@ -5,13 +5,18 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class APVRYPLY
+    public class AHPWREQ
     {
+        public string BiometricsResult { get; set; }
         public string SerialNo { get; set; }
-     
-        public APVRYPLY()
+        public string CredentialSign { get; set; }
+
+
+        public AHPWREQ()
         {
+            BiometricsResult = string.Empty;
             SerialNo = string.Empty;
+            CredentialSign = string.Empty;
         }
     }
 }

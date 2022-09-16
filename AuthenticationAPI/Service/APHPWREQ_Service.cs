@@ -7,22 +7,22 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace AuthenticationAPI.Service
 {
-    public class APVRYREQ_Service : IHttpTrxService
+    public class APHPWREQ_Service : IHttpTrxService
     {
-        private string _SeviceName = "APVRYREQ";
+        private string _SeviceName = "APHPWREQ";
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private ObjectManager ObjectManagerInstance = null;
 
-        public APVRYREQ_Service(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public APHPWREQ_Service(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
         {
             Logger = logger;
             Configuration = configuration;
@@ -42,7 +42,7 @@ namespace AuthenticationAPI.Service
         {
             HttpTrx HttpReply = null;
 
-            string _replyProcessStep = ProcessStep.AVRY_PLY.ToString();
+            string _replyProcessStep = ProcessStep.AHPW_PLY.ToString();
             string _userName = Msg.username;
             string _deviceType = Msg.devicetype;
 
@@ -82,8 +82,8 @@ namespace AuthenticationAPI.Service
                         }
                         else
                         {
-                            APVRYREQ apvryreq = DeserializeObj._APVRYREQ(DecrypContent);
-                            if (apvryreq == null)
+                            AHPWREQ aphpwreq = DeserializeObj._AHPWREQ(DecrypContent);
+                            if (aphpwreq == null)
                             {
                                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                                 HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -91,7 +91,7 @@ namespace AuthenticationAPI.Service
                             }
                             else
                             {
-                                if (Handle_APVRYREQ(_userName, _deviceType, apvryreq) == false)
+                                if (Handle_APHPWREQ(_userName, _deviceType, aphpwreq) == false)
                                 {
                                     int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -99,7 +99,7 @@ namespace AuthenticationAPI.Service
                                 }
                                 else
                                 {
-                                    HttpReply = ReplyAPVRYPLY(_userName, _deviceType, apvryreq);
+                                    HttpReply = this.ReplyAPHPWPLY(_userName, _deviceType, aphpwreq);
                                     return HttpReply;
                                 }
                             }
@@ -109,47 +109,22 @@ namespace AuthenticationAPI.Service
             }
         }
 
-        private HttpTrx ReplyAPVRYPLY(string username, string devicetype, APVRYREQ apvryreq)
-        {
-            HttpTrx HttpReply = null;
-            APVRYPLY Vryply = new APVRYPLY();
-            string _replyProcessStep = ProcessStep.AVRY_PLY.ToString();
 
+        //---- Re modify 
+        private HttpTrx ReplyAPHPWPLY(string username, string devicetype, AHPWREQ aphpwreq)
+        {
+            HttpTrx HttpReply = new HttpTrx();
+            string _replyProcessStep = ProcessStep.AHPW_PLY.ToString();
             try
             {
-                Vryply.SerialNo = GetSerialNo();
-                string APVRYPLYJsonStr = System.Text.Json.JsonSerializer.Serialize(Vryply);
-                AuthDES DES = new AuthDES();
-                string DataContentDES = DES.EncryptDES(APVRYPLYJsonStr);
-
-                ECS HESC = new ECS();
-                HESC.Algo = "DES";
-                HESC.Key = DES.GetKey();
-                HESC.IV = DES.GetIV();
-
-                string ECSEncryptRetMsg = string.Empty;
-                string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
-
-                if (ECSEncryptStr == string.Empty)
-                {
-                    int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                    HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
-                    return HttpReply;
-                }
-                else
-                {
-                    HttpReply = new HttpTrx();
-                    HttpReply.username = username;
-                    HttpReply.procstep = _replyProcessStep;
-                    HttpReply.returncode = 0;
-                    HttpReply.returnmsg = string.Empty;
-                    HttpReply.datacontent = DataContentDES;
-                    HttpReply.ecs = ECSEncryptStr;
-                    HttpReply.ecssign = string.Empty;
-
-                }
+                HttpReply = new HttpTrx();
+                HttpReply.username = username;
+                HttpReply.procstep = _replyProcessStep;
+                HttpReply.returncode = 0;
+                HttpReply.returnmsg = string.Empty;
+                HttpReply.datacontent = string.Empty;
+                HttpReply.ecs = string.Empty;
+                HttpReply.ecssign = string.Empty;
             }
             catch (Exception ex)
             {
@@ -173,19 +148,11 @@ namespace AuthenticationAPI.Service
             return DES_DecryptStr;
         }
 
-        private bool Handle_APVRYREQ(string username, string devicetype, APVRYREQ apvryreq)
+        private bool Handle_APHPWREQ(string username, string devicetype, AHPWREQ aphpwreq)
         {
-            
-            // --- Check PassWord and Pass Code ----
-
+            //---暫時 Always Return True 以後有想到邏輯再補上
+  
             return true;
-        }
-
-        private string GetSerialNo()
-        {
-            Random Rng = new Random((int)DateTime.Now.Millisecond);
-            int R = Rng.Next(1, 255);
-            return R.ToString();
         }
 
 
@@ -203,7 +170,7 @@ namespace AuthenticationAPI.Service
         }
 
 
-        private  string Get_SHA1_Hash(string value)
+        private string Get_SHA1_Hash(string value)
         {
             using var hash = SHA1.Create();
             var byteArray = hash.ComputeHash(Encoding.UTF8.GetBytes(value));

@@ -162,7 +162,10 @@ namespace AuthenticationAPI.Service
                 SecurityManager.GetRSASecurity(username, devicetype).ClientID = username;
                 SecurityManager.GetRSASecurity(username, devicetype).ClientPublicKey = uuidrpt.MobilePublicKey;
                 SecurityManager.UpdateAuthSecurityToDB(username, devicetype);
-                ObjectManagerInstance.SetDeviceUUID(username, uuidrpt.DeviceUUIDJSon);
+
+                var objCredential = ObjectManagerInstance.GetCredInfo(username);
+                objCredential.DeviceUUID = uuidrpt.DeviceUUIDJSon;
+                ObjectManagerInstance.SetCredInfo(username, objCredential);
                 result = true;
             }
             catch (Exception ex)

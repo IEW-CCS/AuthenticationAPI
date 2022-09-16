@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class APREGCMP
+    public class AHPWPLY
     {
-        public string Result { get; set; }
-        public APREGCMP()
+        public string PassWordData { get; set; }
+     
+        public AHPWPLY()
         {
-            Result = string.Empty;
+            PassWordData = string.Empty;
         }
     }
 }

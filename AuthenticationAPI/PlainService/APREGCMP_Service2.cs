@@ -16,15 +16,15 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.Service
 {
-    public class APREGCMP_Service : IHttpTrxService
+    public class APREGCMP_Service2 : IHttpTrxService
     {
-        private string _SeviceName = "APREGCMP";
+        private string _SeviceName = "APREGCMP2";
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private ObjectManager ObjectManagerInstance = null;
 
-        public APREGCMP_Service(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public APREGCMP_Service2(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
         {
             //MetaDBContext dbcontext
             Logger = logger;
@@ -57,56 +57,25 @@ namespace AuthenticationAPI.Service
             }
             else
             {
-                string DecryptECS = string.Empty;
-                string ReturnMsg = string.Empty;
-                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
-                if (ReturnCode != 0)
+                APREGCMP apregcmp = DeserializeObj._APREGCMP(Msg.datacontent);
+                if (apregcmp == null)
                 {
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, ReturnCode, ReturnMsg);
+                    int RTCode = (int)HttpAuthErrorCode.DeserializeError;
+                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                     return HttpReply;
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
+                    if (Handle_APREGCMP(_userName, _deviceType, apregcmp) == false)
                     {
-                        int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
+                        int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
                         HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
                     {
-                        string DecrypContent = this.DecryptDESData(HESC.Key, HESC.IV, Msg.datacontent);
-                        if (DecrypContent == string.Empty)
-                        {
-                            int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                            return HttpReply;
-                        }
-                        else
-                        {
-                            APREGCMP apregcmp = DeserializeObj._APREGCMP(DecrypContent);
-                            if (apregcmp == null)
-                            {
-                                int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                return HttpReply;
-                            }
-                            else
-                            {
-                                if (Handle_APREGCMP(_userName, _deviceType, apregcmp) == false)
-                                {
-                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                    return HttpReply;
-                                }
-                                else
-                                {
-                                    HttpReply = ReplyAPREGFIN(_userName, _deviceType, apregcmp);
-                                    return HttpReply;
-                                }
-                            }
-                        }
+                        HttpReply = ReplyAPREGFIN(_userName, _deviceType, apregcmp);
+                        return HttpReply;
                     }
                 }
             }
@@ -121,41 +90,17 @@ namespace AuthenticationAPI.Service
                 APREGFIN APRegFinish = new APREGFIN();
                 APRegFinish.AuthenticationToken = GenerateVerifyJWTToken(username);
                 APRegFinish.AuthenticationURL = Configuration["Server:HttpAuthServiceURL"];
-               
                 string ARRegFinishJsonStr = JsonSerializer.Serialize(APRegFinish);
 
-                AuthDES DES = new AuthDES();
-                string DataContentDES = DES.EncryptDES(ARRegFinishJsonStr);
+                HttpReply = new HttpTrx();
+                HttpReply.username = username;
+                HttpReply.procstep = replyProcessStep;
+                HttpReply.returncode = 0;
+                HttpReply.returnmsg = string.Empty;
+                HttpReply.datacontent = ARRegFinishJsonStr;
+                HttpReply.ecs = string.Empty;
+                HttpReply.ecssign = string.Empty;
 
-                ECS HESC = new ECS();
-                HESC.Algo = "DES";
-                HESC.Key = DES.GetKey();
-                HESC.IV = DES.GetIV();
-
-                string ECSEncryptRetMsg = string.Empty;
-                string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
-
-                if (ECSEncryptStr == string.Empty)
-                {
-                    int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
-                    HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
-                    return HttpReply;
-                }
-
-                else
-                {
-                    HttpReply = new HttpTrx();
-                    HttpReply.username = username;
-                    HttpReply.procstep = replyProcessStep;
-                    HttpReply.returncode = 0;
-                    HttpReply.returnmsg = string.Empty;
-                    HttpReply.datacontent = DataContentDES;
-                    HttpReply.ecs = ECSEncryptStr;
-                    HttpReply.ecssign = string.Empty;
-
-                }
             }
             catch (Exception ex)
             {
@@ -182,7 +127,6 @@ namespace AuthenticationAPI.Service
         private bool Handle_APREGCMP(string username, string devicetype, APREGCMP apregcmp)
         {
             //---暫時 Always Return True 以後有想到邏輯再補上
-
             bool result = apregcmp.Result == "true" ? true : false;
             return result;
         }
@@ -208,6 +152,5 @@ namespace AuthenticationAPI.Service
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);
             return token.ToString();
         }
-
     }
 }

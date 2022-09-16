@@ -20,8 +20,8 @@ namespace AuthenticationAPI.DtoS
         VCON_PLY,        //Verify connect Reply
         AVRY_REQ,        // App Vryope Request
         AVRY_PLY,        // App Vryope Reply
-        AVRY_CMP,        // App Vryope Complete
-        AVRY_FIN,        // App Vryope Finished
+        AHPW_REQ,        // App Vryope Complete
+        AHPW_PLY,        // App Vryope Finished
 
         WCON_REQ,       // WebSocket Connect Request
         WCON_PLY,       // WebSocket Connect Reply

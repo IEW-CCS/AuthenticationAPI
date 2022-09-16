@@ -12,10 +12,10 @@ namespace AuthenticationAPI.Kernel
 {
     public class ObjectManager : IObjectManager
     {
-        private  ConcurrentDictionary<string, CREDINFO> _credInfo = null;
-        private  ConcurrentDictionary<string, string> _deviceUUID = null;
+        private  ConcurrentDictionary<string, CRED_INFO> _credInfo = null;
         private  ConcurrentDictionary<string, Credential> _credential = null;
         private  ConcurrentDictionary<string, string> _registerStatus = null;
+        private  ConcurrentDictionary<string, string> _verifyStatus = null;
         private  ConcurrentDictionary<string, string> _hashPassword = null;
 
 
@@ -35,18 +35,17 @@ namespace AuthenticationAPI.Kernel
 
         private void Init()
         {
-            _credInfo = new ConcurrentDictionary<string, CREDINFO>();
-            _deviceUUID = new ConcurrentDictionary<string, string> ();
+            _credInfo = new ConcurrentDictionary<string, CRED_INFO>();
             _credential = new ConcurrentDictionary<string, Credential>();
             _registerStatus = new ConcurrentDictionary<string, string>();
             _hashPassword = new ConcurrentDictionary<string, string>();
         }
 
-        public CREDINFO GetCredInfo(string Key)
+        public CRED_INFO GetCredInfo(string Key)
         {
-            return this._credInfo.GetOrAdd(Key, new CREDINFO());
+            return this._credInfo.GetOrAdd(Key, new CRED_INFO());
         }
-        public void SetCredInfo(string Key, CREDINFO Obj)
+        public void SetCredInfo(string Key, CRED_INFO Obj)
         {
             this._credInfo.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
         }
@@ -69,32 +68,31 @@ namespace AuthenticationAPI.Kernel
         }
         
        
-        public void SetDeviceUUID(string Key, string uuid)
+        public string GetVerifyStatus(string Key)
         {
-            this._deviceUUID.AddOrUpdate(Key, uuid, (key, oldvalue) => uuid);
-        }
-
-        public string GetDeviceUUID(string Key)
-        {
-            return this._deviceUUID.GetOrAdd(Key, key =>
+            return this._verifyStatus.GetOrAdd(Key, key =>
             {
-                return string.Empty;
+                return string.Empty; 
             });
         }
+        public void SetVerifyStatus(string Key, string status)
+        {
+            this._verifyStatus.AddOrUpdate(Key, status, (key, oldvalue) => status);
+        }
+
+
 
         public string GetRegisterStatus(string Key)
         {
             return this._registerStatus.GetOrAdd(Key, key =>
             {
-                return string.Empty; 
+                return string.Empty;
             });
         }
-
         public void SetRegisterStatus(string Key, string status)
         {
             this._registerStatus.AddOrUpdate(Key, status, (key, oldvalue) => status);
         }
-
 
         public string GetHashPassword(string Key)
         {

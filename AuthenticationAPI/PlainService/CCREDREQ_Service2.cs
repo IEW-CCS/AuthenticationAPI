@@ -146,7 +146,7 @@ namespace AuthenticationAPI.Service
 
         private void GenerateCredential(string username)
         {
-            CREDINFO credObj = ObjectManagerInstance.GetCredInfo(username);
+            CRED_INFO credObj = ObjectManagerInstance.GetCredInfo(username);
             credObj.Nonce = 0;
             string credJsonStr = JsonSerializer.Serialize(credObj);
             string signOut = string.Empty;

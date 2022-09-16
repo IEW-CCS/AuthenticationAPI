@@ -18,7 +18,7 @@ namespace AuthenticationAPI.DtoS
 
 
     }
-    public class CREDINFO
+    public class CRED_INFO
     {
         public string UserName { get; set; }
         public string APPGuid { get; set; }
@@ -27,7 +27,7 @@ namespace AuthenticationAPI.DtoS
         public int Nonce { get; set; }
         public DateTime CreateDateTime { get; set; }
 
-        public CREDINFO()
+        public CRED_INFO()
         {
             UserName = string.Empty;
             APPGuid = string.Empty;

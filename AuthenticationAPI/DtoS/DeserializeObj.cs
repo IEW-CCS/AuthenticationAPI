@@ -126,12 +126,14 @@ namespace AuthenticationAPI.DtoS
             }
             return obj;
         }
-        public static APVRYCMP _APVRYCMP(string DataContent)
+
+
+        public static AVCONREQ _AVCONREQ(string DataContent)
         {
-            APVRYCMP obj = null;
+            AVCONREQ obj = null;
             try
             {
-                obj = JsonSerializer.Deserialize<APVRYCMP>(DataContent);
+                obj = JsonSerializer.Deserialize<AVCONREQ>(DataContent);
             }
             catch
             {
@@ -139,6 +141,20 @@ namespace AuthenticationAPI.DtoS
             }
             return obj;
         }
+        public static AVCONPLY _AVCONPLY(string DataContent)
+        {
+            AVCONPLY obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<AVCONPLY>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+
         public static APVRYREQ _APVRYREQ(string DataContent)
         {
             APVRYREQ obj = null;
@@ -165,5 +181,33 @@ namespace AuthenticationAPI.DtoS
             }
             return obj;
         }
+
+        public static AHPWREQ _AHPWREQ(string DataContent)
+        {
+            AHPWREQ obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<AHPWREQ>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+        public static AHPWPLY _AHPWPLY(string DataContent)
+        {
+            AHPWPLY obj = null;
+            try
+            {
+                obj = JsonSerializer.Deserialize<AHPWPLY>(DataContent);
+            }
+            catch
+            {
+                obj = null;
+            }
+            return obj;
+        }
+
     }
 }
