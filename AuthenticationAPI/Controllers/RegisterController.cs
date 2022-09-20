@@ -130,7 +130,7 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.AREG_CMP:
                             {
-                                var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == "APREGCMP").FirstOrDefault();
+                                var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == "APREGCMP2").FirstOrDefault();
                                 if (HandleAREGCMP != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);

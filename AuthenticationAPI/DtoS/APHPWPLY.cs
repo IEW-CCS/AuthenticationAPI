@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI.DtoS
 {
-    public class AHPWPLY
+    public class APHPWPLY
     {
         public string PassWordData { get; set; }
      
-        public AHPWPLY()
+        public APHPWPLY()
         {
             PassWordData = string.Empty;
         }

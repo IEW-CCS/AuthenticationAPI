@@ -15,6 +15,7 @@ namespace AuthenticationAPI.DtoS
         ECSbyPublicKeyErrorRSA = 6,
         DecryptECSError = 7,
         CreateCredentialError = 8,
+        HashPasswordCreateError = 9,
         ServiceNotRegister = 90,
         ServerProgressError = 91
     }
@@ -37,6 +38,7 @@ namespace AuthenticationAPI.DtoS
               { 6, "Encrypt by Client Public Key Error (RSA)" },
               { 7, "Descrypt ECS by Private Key Error (RSA)" },
               { 8, "Create Credential Error" },
+              { 9, "Create Hash Pass Word Error" },
               { 90, "Service Not Register, So can be Handle" },
               { 91, "Service Process Error, So can be Handle" },
         };

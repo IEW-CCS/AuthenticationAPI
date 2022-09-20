@@ -182,12 +182,12 @@ namespace AuthenticationAPI.DtoS
             return obj;
         }
 
-        public static AHPWREQ _AHPWREQ(string DataContent)
+        public static APHPWREQ _AHPWREQ(string DataContent)
         {
-            AHPWREQ obj = null;
+            APHPWREQ obj = null;
             try
             {
-                obj = JsonSerializer.Deserialize<AHPWREQ>(DataContent);
+                obj = JsonSerializer.Deserialize<APHPWREQ>(DataContent);
             }
             catch
             {
@@ -195,12 +195,12 @@ namespace AuthenticationAPI.DtoS
             }
             return obj;
         }
-        public static AHPWPLY _AHPWPLY(string DataContent)
+        public static APHPWPLY _AHPWPLY(string DataContent)
         {
-            AHPWPLY obj = null;
+            APHPWPLY obj = null;
             try
             {
-                obj = JsonSerializer.Deserialize<AHPWPLY>(DataContent);
+                obj = JsonSerializer.Deserialize<APHPWPLY>(DataContent);
             }
             catch
             {

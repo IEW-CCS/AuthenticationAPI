@@ -28,15 +28,17 @@ namespace AuthenticationAPI.Controllers
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private readonly IQueueManager QueueManager;
+        private readonly ILDAPManagement LDAPManager;
         private readonly ObjectManager ObjectManagerInstance;
 
-        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
+        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager, ILDAPManagement ldapmanager)
         {
             Logger = logger;
             HttpTrxServices = services;
             Configuration = configuration;
             SecurityManager = securitymanager;
             QueueManager = queuemanager;
+            LDAPManager = ldapmanager;
             ObjectManagerInstance = (ObjectManager)objectmanager.GetInstance;
         }
 
@@ -68,7 +70,7 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.VCON_REQ:
                             {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "AVCONREQ").FirstOrDefault();
+                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "AVCONREQ2").FirstOrDefault();
                                 if (HandleAPVRYREQ != null)
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
@@ -92,7 +94,7 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.AVRY_REQ:
                             {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "APVRYREQ").FirstOrDefault();
+                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "APVRYREQ2").FirstOrDefault();
                                 if (HandleAPVRYREQ != null)
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
@@ -102,11 +104,6 @@ namespace AuthenticationAPI.Controllers
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
-                                        string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
-                                        if (hashPassword != string.Empty)
-                                        {
-                                            LDAPPWChange(UserName, hashPassword);
-                                        }
                                     }
                                 }
                                 else
@@ -122,12 +119,28 @@ namespace AuthenticationAPI.Controllers
                      
                         case ProcessStep.AHPW_REQ:
                             {
-                                var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == "APHPWREQ").FirstOrDefault();
+                                var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == "APHPWREQ2").FirstOrDefault();
                                 if (HandleAPHPWREQ != null)
                                 {
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleAPHPWREQ.HandlepHttpTrx(Msg);
+                                    if (HttpReply.returncode == 0)
+                                    {
+                                        ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
+                                        string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
+                                        if (hashPassword != string.Empty)
+                                        {
+                                            LDAPPWChange(UserName, hashPassword);
+                                        }
+                                        else
+                                        {
+                                            string _replyProcessStep = ProcessStep.AHPW_PLY.ToString();
+                                            Logger.LogInformation("ERROR !! Hash PassWord Generate Error.");
+                                            int RTCode = (int)HttpAuthErrorCode.HashPasswordCreateError;
+                                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                        }
+                                    }
                                 }
                                 else
                                 {
@@ -182,12 +195,20 @@ namespace AuthenticationAPI.Controllers
             return result;
         }
 
-        private void LDAPPWChange(string UserName, string hashPassword)
+        private bool LDAPPWChange(string UserName, string hashPassword)
         {
-            //  Call LDAP Change Password Function
+            bool result = false;
+            try
+            {
+                  result = LDAPManager.ModifyUserPassword(UserName, hashPassword);
+            }
+            catch(Exception ex)
+            {
+                result = false;
+                Logger.LogError("Generate Hash Password Error, Error Msg = " + ex.Message);
 
+            }
+            return result;
         }
-
-
     }
 }

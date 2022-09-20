@@ -45,10 +45,15 @@ namespace AuthenticationAPI
             services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service>();
             services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service>();
             services.AddSingleton<IHttpTrxService, Service.APHPWREQ_Service>();
-           // services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
+            services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
 
-            services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.APHPWREQ_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.AVCONREQ_Service2>();
             services.AddSingleton<IHttpTrxService, Service.CCREDREQ_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service2>();
+
 
 
             //services.AddHostedService<LDAPManager>();
@@ -127,14 +132,10 @@ namespace AuthenticationAPI
             SecurityManager.InitFromDB(DBProvider, DBConStr);
 
            
-            // for LDAP Testing 20220906 
-          //  var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
-          //  LDAPManager.Init();
-          //  bool result = LDAPManager.ModifyUserPassword("james", "James1234");
-            
-
-
-
+            // for LDAP First Initial Run
+            var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
+            bool InitialResult  = LDAPManager.Init();
+ 
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();

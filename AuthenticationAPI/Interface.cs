@@ -39,15 +39,15 @@ namespace AuthenticationAPI
     }
 
 
-    interface ILDAPManagement
+    public interface ILDAPManagement
     {
         string ManageName
         {
             get;
         }
 
-        public void Init();
-        public bool ModifyUserPassword(string username, string password);
+        bool Init();
+        bool ModifyUserPassword(string username, string password);
 
     }
 

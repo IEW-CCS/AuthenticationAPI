@@ -17,22 +17,12 @@ namespace AuthenticationAPI.Manager
 {
     public class LDAPManager : ILDAPManagement
     {
-        private int count = 0;
-        private readonly IQueueManager QueueManager;
-        private readonly IObjectManager ObjectManager;
+
         private readonly ILogger<LoginController> Logger;
         private readonly IConfiguration Configuration;
-        private Thread _routineTask = null;
         private string _ManagerName = "LDAPManager";
-        private bool _keepRunning = true;
-        private DirectoryEntry entry = null;
-        private readonly ISecurityManager SecurityManager;
+        private DirectoryEntry BaseEntry = null;
 
-
-
-        private string LDAPPath = string.Empty;  
-        private string LDAPUserName = string.Empty;
-        private string LDAPPassWord = string.Empty;
 
         public string ManageName
         {
@@ -42,80 +32,35 @@ namespace AuthenticationAPI.Manager
             }
         }
 
-        public LDAPManager(ILogger<LoginController> logger, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
+        public LDAPManager(ILogger<LoginController> logger, IConfiguration configuration)
         {
-            Logger = logger;
-            QueueManager = queuemanager;
-            ObjectManager = objectmanager;
+            Logger = logger;       
             Configuration = configuration;
-            SecurityManager = securitymanager;
-            Init();
         }
 
 
-        public void Init()
+        public bool Init()
         {
+            bool InitialResult = false;
             try
             {
-                LDAPPath = Configuration["LDAP:Path"];
-                LDAPUserName = Configuration["LDAP:AdminName"];
-                LDAPPassWord = Configuration["LDAP:AdminPassWord"];
-                entry = new DirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord, AuthenticationTypes.None);
-                using (DirectorySearcher deSearch = new DirectorySearcher(entry)) //Search query instance
+                string LDAPPath = Configuration["LDAP:Path"];
+                string LDAPUserName = Configuration["LDAP:AdminName"];
+                string LDAPPassWord = Configuration["LDAP:AdminPassWord"];
+                BaseEntry = new DirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord, AuthenticationTypes.None);
+                using (DirectorySearcher deSearch = new DirectorySearcher(BaseEntry)) //Search query instance
                 {
                     SearchResult searchresult = deSearch.FindOne();
                 }
+                InitialResult = true;
             }
             catch(Exception ex)
             {
                 Logger.LogError("LDAP Init Error, Msg = " + ex.Message);
+                InitialResult = false;
             }
-
+            return InitialResult;
         }
-
-
-        private string GenerateCredential(string username)
-        {
-            // Testing 
-            AuthenticationAPI.DtoS.CRED_INFO credInfo = new AuthenticationAPI.DtoS.CRED_INFO();
-            credInfo.UserName = "james001";
-            credInfo.APPGuid = "Enter";
-            credInfo.APPVersion = "1.0.0.0";
-            credInfo.Nonce = 0;
-
-      
-
-            string credJsonStr = JsonSerializer.Serialize(credInfo);
-            string signOut = string.Empty;
-            string signOut1 = string.Empty;
-            string signOut2 = string.Empty;
-
-
-            int i1 = SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut1, out string returnMsgOut1);
-
-           int i2 = SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut2, out string returnMsgOut2);
-
-
-            int r1 = SecurityManager.SIGNRSASecurity().CheckSignString(credJsonStr, signOut1, out string checkReturn1);
-
-            int r2 = SecurityManager.SIGNRSASecurity().CheckSignString(credJsonStr, signOut2, out string checkReturn2);
-
-
-            string Credential = string.Empty;
-            if (SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut, out string returnMsgOut) == 0)
-            {
-                Credential = signOut;
-            }
-            else
-            {
-                Credential = string.Empty;
-            }
-            return Credential;
-        }
-
-
-
-
 
         private DirectoryEntry GetDirectoryEntry(string path, string username, string password)
         {
@@ -129,39 +74,43 @@ namespace AuthenticationAPI.Manager
             try
             {
                 //DirectoryEntry de = GetDirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord);
-                using (DirectorySearcher deSearch = new DirectorySearcher(entry)) //Search query instance
+                using (DirectorySearcher deSearch = new DirectorySearcher(BaseEntry)) //Search query instance
                 {
                     // deSearch.Filter = "(&(objectClass=organizationalPerson)(cn=" + cnPath + "))"; //Filter by pager (Student number)
                     deSearch.Filter = string.Format("(&(uid={0}))", username); 
                     deSearch.SearchScope = SearchScope.Subtree;
                     SearchResult searchresult = deSearch.FindOne();
-                    using (DirectoryEntry uEntry = searchresult.GetDirectoryEntry())
+
+                    if (searchresult == null)
                     {
-
-                        foreach (string property in uEntry.Properties.PropertyNames)
+                        result = false;
+                        Logger.LogError(string.Format("UserName = {0}, Not Register in LDAP Server.", username));
+                    }
+                    else
+                    {
+                        using (DirectoryEntry uEntry = searchresult.GetDirectoryEntry())
                         {
-                            string value = uEntry.Properties[property][0].ToString();
+                            uEntry.InvokeSet("userPassword", password);
+                            uEntry.CommitChanges();
+                            uEntry.Close();
+                            result = true;
+                            /*
+                            foreach (string property in uEntry.Properties.PropertyNames)
+                            {
+                                string value = uEntry.Properties[property][0].ToString();
+                                Logger.LogInformation(property + ":" + value);
+                            }*/
 
-                            Logger.LogInformation(property + ":" + value);
-       
+                            //uEntry.InvokeSet("mail", "James01@gmail.com");
+
                         }
-
-                        uEntry.InvokeSet("mail", "James01@gmail.com");
-                        uEntry.InvokeSet("userPassword", "HelloJames");
-
-                        uEntry.CommitChanges();
-                        uEntry.Close();
-
-
-
-                        // SetPassword(uEntry, password);
-                        result = true;
                     }
                 }
             }
             catch (Exception ex )
             {
                 result = false;
+                Logger.LogError(string.Format("Modify User Password Error, UserName = {0}, Password = {1}, Exception Message = {2}.",username,password,ex.Message));
             }
 
             return result;

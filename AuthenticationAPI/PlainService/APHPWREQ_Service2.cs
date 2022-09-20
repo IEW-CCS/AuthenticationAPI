@@ -16,7 +16,7 @@ using System.IO;
 
 namespace AuthenticationAPI.Service
 {
-    public class APHPWREQ_Service : IHttpTrxService
+    public class APHPWREQ_Service2 : IHttpTrxService
     {
         private string _SeviceName = "APHPWREQ";
         private readonly ILogger Logger;
@@ -24,7 +24,7 @@ namespace AuthenticationAPI.Service
         private readonly ISecurityManager SecurityManager;
         private ObjectManager ObjectManagerInstance = null;
 
-        public APHPWREQ_Service(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public APHPWREQ_Service2(ILogger<APREGCMP_Service> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
         {
             Logger = logger;
             Configuration = configuration;
@@ -56,58 +56,29 @@ namespace AuthenticationAPI.Service
             }
             else
             {
-                string DecryptECS = string.Empty;
-                string ReturnMsg = string.Empty;
-                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
-                if (ReturnCode != 0)
+                APHPWREQ aphpwreq = DeserializeObj._AHPWREQ(Msg.datacontent);
+                if (aphpwreq == null)
                 {
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, ReturnCode, ReturnMsg);
+                    int RTCode = (int)HttpAuthErrorCode.DeserializeError;
+                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                     return HttpReply;
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
+                    if (Handle_APHPWREQ(_userName, _deviceType, aphpwreq) == false)
                     {
-                        int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
+                        int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
                         HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
                     {
-                        string DecrypContent = this.DecryptDESData(HESC.Key, HESC.IV, Msg.datacontent);
-                        if (DecrypContent == string.Empty)
-                        {
-                            int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                            return HttpReply;
-                        }
-                        else
-                        {
-                            APHPWREQ aphpwreq = DeserializeObj._AHPWREQ(DecrypContent);
-                            if (aphpwreq == null)
-                            {
-                                int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                return HttpReply;
-                            }
-                            else
-                            {
-                                if (Handle_APHPWREQ(_userName, _deviceType, aphpwreq) == false)
-                                {
-                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                                    return HttpReply;
-                                }
-                                else
-                                {
-                                    HttpReply = this.ReplyAPHPWPLY(_userName, _deviceType, aphpwreq);
-                                    return HttpReply;
-                                }
-                            }
-                        }
+                        HttpReply = this.ReplyAPHPWPLY(_userName, _deviceType, aphpwreq);
+                        return HttpReply;
                     }
                 }
+
+
             }
         }
 
@@ -126,45 +97,21 @@ namespace AuthenticationAPI.Service
                     int RTCode = (int)HttpAuthErrorCode.HashPasswordCreateError;
                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                     return HttpReply;
-
                 }
                 else
                 {
                     APHPWPLY aphpwply = new APHPWPLY();
                     aphpwply.PassWordData = hashPassword;
-
                     string APHPWPLYJsonStr = System.Text.Json.JsonSerializer.Serialize(aphpwply);
-                    AuthDES DES = new AuthDES();
-                    string DataContentDES = DES.EncryptDES(APHPWPLYJsonStr);
 
-                    ECS HESC = new ECS();
-                    HESC.Algo = "DES";
-                    HESC.Key = DES.GetKey();
-                    HESC.IV = DES.GetIV();
-
-                    string ECSEncryptRetMsg = string.Empty;
-                    string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                    string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
-
-                    if (ECSEncryptStr == string.Empty)
-                    {
-                        int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                        HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
-                        HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
-                        return HttpReply;
-                    }
-                    else
-                    {
-                        HttpReply = new HttpTrx();
-                        HttpReply.username = username;
-                        HttpReply.procstep = _replyProcessStep;
-                        HttpReply.returncode = 0;
-                        HttpReply.returnmsg = string.Empty;
-                        HttpReply.datacontent = DataContentDES;
-                        HttpReply.ecs = ECSEncryptStr;
-                        HttpReply.ecssign = string.Empty;
-
-                    }
+                    HttpReply = new HttpTrx();
+                    HttpReply.username = username;
+                    HttpReply.procstep = _replyProcessStep;
+                    HttpReply.returncode = 0;
+                    HttpReply.returnmsg = string.Empty;
+                    HttpReply.datacontent = APHPWPLYJsonStr;
+                    HttpReply.ecs = string.Empty;
+                    HttpReply.ecssign = string.Empty;
                 }
             }
             catch (Exception ex)
