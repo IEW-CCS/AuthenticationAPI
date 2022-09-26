@@ -285,7 +285,7 @@ namespace AuthenticationAPI.Middleware
         private WSTrx WSTrxReplyNG(int retuenCode)
         {
             WSTrx WSReply = new WSTrx();
-            WSReply.ProcStep = ProcessStep.WCON_PLY.ToString();
+            WSReply.ProcStep = ProcessStep.ARWSCPLY.ToString();
             WSReply.ReturnCode = retuenCode;
             WSReply.ReturnMsg = WSAuthError.ErrorMsg(retuenCode);
             WSReply.DataContent = string.Empty;
@@ -295,7 +295,7 @@ namespace AuthenticationAPI.Middleware
         private WSTrx WSTrxReplyOK()
         {
             WSTrx WSReply = new WSTrx();
-            WSReply.ProcStep = ProcessStep.WCON_PLY.ToString();
+            WSReply.ProcStep = ProcessStep.ARWSCPLY.ToString();
             WSReply.ReturnCode = 0;
             WSReply.ReturnMsg = "Login Success";
             WSReply.DataContent = string.Empty;

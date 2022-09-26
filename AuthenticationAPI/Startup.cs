@@ -39,20 +39,20 @@ namespace AuthenticationAPI
             services.AddSingleton<IObjectManager, Kernel.ObjectManager>();
             services.AddSingleton<ISecurityManager, SecurityManager>();
 
-            services.AddSingleton<IHttpTrxService, Service.APREGREQ_Service>();
-            services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service>();
-            services.AddSingleton<IHttpTrxService, Service.CCREDREQ_Service>();
-            services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service>();
-            services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service>();
-            services.AddSingleton<IHttpTrxService, Service.APHPWREQ_Service>();
+            services.AddSingleton<IHttpTrxService, Service.ARREGREQService>();
+            services.AddSingleton<IHttpTrxService, Service.CRUIDRPTService>();
+            services.AddSingleton<IHttpTrxService, Service.CRCRLREQService>();
+            services.AddSingleton<IHttpTrxService, Service.ARREGCMPService>();
+            services.AddSingleton<IHttpTrxService, Service.AAUTHREQService>();
+            services.AddSingleton<IHttpTrxService, Service.AAPSWREQService>();
             services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
 
-            services.AddSingleton<IHttpTrxService, Service.APHPWREQ_Service2>();
-            services.AddSingleton<IHttpTrxService, Service.APREGCMP_Service2>();
-            services.AddSingleton<IHttpTrxService, Service.APVRYREQ_Service2>();
-            services.AddSingleton<IHttpTrxService, Service.AVCONREQ_Service2>();
-            services.AddSingleton<IHttpTrxService, Service.CCREDREQ_Service2>();
-            services.AddSingleton<IHttpTrxService, Service.DUUIDRPT_Service2>();
+            services.AddSingleton<IHttpTrxService, Service.AAPSWREQServiceLite>();
+            services.AddSingleton<IHttpTrxService, Service.ARREGCMPServiceLite>();
+            services.AddSingleton<IHttpTrxService, Service.AAUTHREQServiceLite>();
+            services.AddSingleton<IHttpTrxService, Service.AACONREQServiceLite>();
+            services.AddSingleton<IHttpTrxService, Service.CRCRLREQServiceLite>();
+            services.AddSingleton<IHttpTrxService, Service.CRUIDRPTServiceLite>();
 
 
 

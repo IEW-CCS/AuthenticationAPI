@@ -67,9 +67,9 @@ namespace AuthenticationAPI.Controllers
                 {
                     switch (PStep)
                     {
-                        case ProcessStep.UUID_RPT:
+                        case ProcessStep.CRUIDRPT:
                             {
-                                var HandleDUUIDRPT = HttpTrxServices.Where(s => s.ServiceName == "DUUIDRPT2").FirstOrDefault();
+                                var HandleDUUIDRPT = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.CRUIDRPT_Lite.ToString()).FirstOrDefault();
                                 if (HandleDUUIDRPT != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
@@ -85,7 +85,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.UUID_ACK.ToString();
+                                    string _replyProcessStep = ProcessStep.CRUIDPLY.ToString();
                                     Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -93,9 +93,9 @@ namespace AuthenticationAPI.Controllers
                                 break;
                             }
 
-                        case ProcessStep.CRED_REQ:
+                        case ProcessStep.CRCRLREQ:
                             {
-                                var HandleCREDREQ = HttpTrxServices.Where(s => s.ServiceName == "CCREDREQ2").FirstOrDefault();
+                                var HandleCREDREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.CRCRLREQ_Lite.ToString()).FirstOrDefault();
                                 if (HandleCREDREQ != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
@@ -120,7 +120,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.CRED_PLY.ToString();
+                                    string _replyProcessStep = ProcessStep.CRCRLPLY.ToString();
                                     Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -128,9 +128,9 @@ namespace AuthenticationAPI.Controllers
                                 break;
                             }
 
-                        case ProcessStep.AREG_CMP:
+                        case ProcessStep.ARREGCMP:
                             {
-                                var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == "APREGCMP2").FirstOrDefault();
+                                var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.ARREGCMP_Lite.ToString()).FirstOrDefault();
                                 if (HandleAREGCMP != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
@@ -146,7 +146,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.AREG_FIN.ToString();
+                                    string _replyProcessStep = ProcessStep.ARREGFIN.ToString();
                                     Logger.LogInformation("ERROR !! APREGCMP Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -195,9 +195,9 @@ namespace AuthenticationAPI.Controllers
                 ProcessStep PStep = (ProcessStep)Enum.Parse(typeof(ProcessStep), procStep);
                 switch (PStep)
                 {
-                    case ProcessStep.UUID_RPT:
-                    case ProcessStep.CRED_REQ:  
-                    case ProcessStep.AREG_CMP:
+                    case ProcessStep.CRUIDRPT:
+                    case ProcessStep.CRCRLREQ:  
+                    case ProcessStep.ARREGCMP:
                         result = true;
                         break;
                     default:
@@ -217,10 +217,10 @@ namespace AuthenticationAPI.Controllers
         private void WebSocketUIDAnnounce(string username, Credential credentialcontent)
         {
             WSTrx WebSocketReply = null;
-            string ReplyProcStep = ProcessStep.WUID_ANN.ToString();
+            string ReplyProcStep = ProcessStep.ARWSCANN.ToString();
             string Device_type = DeviceType.CONSOLE.ToString();
 
-            WSUIDANN wsuidann = new WSUIDANN();
+            ARWSCANN wsuidann = new ARWSCANN();
             wsuidann.Credential = credentialcontent.CredContent;
             wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
             string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);

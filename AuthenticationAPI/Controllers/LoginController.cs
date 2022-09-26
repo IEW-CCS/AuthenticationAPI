@@ -28,7 +28,7 @@ namespace AuthenticationAPI.Controllers
         [HttpPost("regLogin")]
         public HttpTrx regLogin(HttpTrx Msg)
         {
-            var HandleAPREGREG = HttpTrxServices.Where(s => s.ServiceName == "APREGREQ").FirstOrDefault();
+            var HandleAPREGREG = HttpTrxServices.Where(s => s.ServiceName == TransService.ARREGREQ.ToString()).FirstOrDefault();
             if (HandleAPREGREG != null)
             {
                 string httpTrxMsg = JsonSerializer.Serialize(Msg);
@@ -37,7 +37,7 @@ namespace AuthenticationAPI.Controllers
             }
             else
             {
-                string _replyProcessStep = ProcessStep.AREG_PLY.ToString();
+                string _replyProcessStep = ProcessStep.ARREGPLY.ToString();
                 Logger.LogInformation("ERROR !! APREGREQ Not Register.");
                 int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                 HttpTrx HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);

@@ -12,7 +12,7 @@ namespace AuthenticationAPI.Kernel
 {
     public class ObjectManager : IObjectManager
     {
-        private  ConcurrentDictionary<string, CRED_INFO> _credInfo = null;
+        private  ConcurrentDictionary<string, Credential_Info> _credInfo = null;
         private  ConcurrentDictionary<string, Credential> _credential = null;
         private  ConcurrentDictionary<string, string> _registerStatus = null;
         private  ConcurrentDictionary<string, string> _verifyStatus = null;
@@ -35,17 +35,17 @@ namespace AuthenticationAPI.Kernel
 
         private void Init()
         {
-            _credInfo = new ConcurrentDictionary<string, CRED_INFO>();
+            _credInfo = new ConcurrentDictionary<string, Credential_Info>();
             _credential = new ConcurrentDictionary<string, Credential>();
             _registerStatus = new ConcurrentDictionary<string, string>();
             _hashPassword = new ConcurrentDictionary<string, string>();
         }
 
-        public CRED_INFO GetCredInfo(string Key)
+        public Credential_Info GetCredInfo(string Key)
         {
-            return this._credInfo.GetOrAdd(Key, new CRED_INFO());
+            return this._credInfo.GetOrAdd(Key, new Credential_Info());
         }
-        public void SetCredInfo(string Key, CRED_INFO Obj)
+        public void SetCredInfo(string Key, Credential_Info Obj)
         {
             this._credInfo.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
         }

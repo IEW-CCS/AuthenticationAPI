@@ -68,9 +68,9 @@ namespace AuthenticationAPI.Controllers
                     switch (PStep)
                     {
 
-                        case ProcessStep.VCON_REQ:
+                        case ProcessStep.AACONREQ:
                             {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "AVCONREQ2").FirstOrDefault();
+                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.AACONREQ_Lite.ToString()).FirstOrDefault();
                                 if (HandleAPVRYREQ != null)
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
@@ -84,7 +84,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.VCON_PLY.ToString();
+                                    string _replyProcessStep = ProcessStep.AACONPLY.ToString();
                                     Logger.LogInformation("ERROR !! AVCONREQ Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -92,9 +92,9 @@ namespace AuthenticationAPI.Controllers
                                 break;
                             }
 
-                        case ProcessStep.AVRY_REQ:
+                        case ProcessStep.AAUTHREQ:
                             {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == "APVRYREQ2").FirstOrDefault();
+                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.AAUTHREQ_Lite.ToString()).FirstOrDefault();
                                 if (HandleAPVRYREQ != null)
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
@@ -108,7 +108,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.AVRY_PLY.ToString();
+                                    string _replyProcessStep = ProcessStep.AAUTHPLY.ToString();
                                     Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -117,9 +117,9 @@ namespace AuthenticationAPI.Controllers
                             }
 
                      
-                        case ProcessStep.AHPW_REQ:
+                        case ProcessStep.AAPSWREQ:
                             {
-                                var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == "APHPWREQ2").FirstOrDefault();
+                                var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.AAPSWREQ_Lite.ToString()).FirstOrDefault();
                                 if (HandleAPHPWREQ != null)
                                 {
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
@@ -135,7 +135,7 @@ namespace AuthenticationAPI.Controllers
                                         }
                                         else
                                         {
-                                            string _replyProcessStep = ProcessStep.AHPW_PLY.ToString();
+                                            string _replyProcessStep = ProcessStep.AAPSWPLY.ToString();
                                             Logger.LogInformation("ERROR !! Hash PassWord Generate Error.");
                                             int RTCode = (int)HttpAuthErrorCode.HashPasswordCreateError;
                                             HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -144,7 +144,7 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.AHPW_PLY.ToString();
+                                    string _replyProcessStep = ProcessStep.AAPSWPLY.ToString();
                                     Logger.LogInformation("ERROR !! APREGCMP Not Register.");
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -178,9 +178,9 @@ namespace AuthenticationAPI.Controllers
                 ProcessStep PStep = (ProcessStep)Enum.Parse(typeof(ProcessStep), procStep);
                 switch (PStep)
                 {
-                    case ProcessStep.VCON_REQ:
-                    case ProcessStep.AVRY_REQ:
-                    case ProcessStep.AHPW_REQ:
+                    case ProcessStep.AACONREQ:
+                    case ProcessStep.AAUTHREQ:
+                    case ProcessStep.AAPSWREQ:
                         result = true;
                         break;
                     default:
