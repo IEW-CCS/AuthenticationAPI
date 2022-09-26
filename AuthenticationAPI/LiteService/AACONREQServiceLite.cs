@@ -54,28 +54,74 @@ namespace AuthenticationAPI.Service
             }
             else
             {
-                AACONREQ avconreq = DeserializeObj._AVCONREQ(Msg.datacontent);
-                if (avconreq == null)
+                string DecryptECS = string.Empty;
+                string ReturnMsg = string.Empty;
+                int ReturnCode = SecurityManager.GetRSASecurity(userName, deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
+                if (ReturnCode != 0)
                 {
-                    int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, ReturnCode, ReturnMsg);
                     return HttpReply;
                 }
                 else
                 {
-                    if (Handle_AVCONREQ(userName, deviceType, avconreq) == false)
+                    ECS HESC = DeserializeObj._ECS(DecryptECS);
+                    if (HESC == null)
                     {
-                        int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                        int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                         HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
                     {
-                        HttpReply = this.ReplyAVCONPLY(userName, deviceType, avconreq);
-                        return HttpReply;
+                        string DecrypContent = this.DecryptDESData(HESC.Key, HESC.IV, Msg.datacontent);
+                        if (DecrypContent == string.Empty)
+                        {
+                            int RTCode = (int)HttpAuthErrorCode.DecryptError;
+                            HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
+                            return HttpReply;
+                        }
+                        else
+                        {
+                            AACONREQ avconreq = DeserializeObj._AVCONREQ(DecrypContent);
+                            if (avconreq == null)
+                            {
+                                int RTCode = (int)HttpAuthErrorCode.DeserializeError;
+                                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
+                                return HttpReply;
+                            }
+                            else
+                            {
+                                if (Handle_AVCONREQ(userName, deviceType, avconreq) == false)
+                                {
+                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
+                                    return HttpReply;
+                                }
+                                else
+                                {
+                                    HttpReply = this.ReplyAVCONPLY(userName, deviceType, avconreq);
+                                    return HttpReply;
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        private string DecryptDESData(string key, string iv, string DataContent)
+        {
+            AuthDES objDes = new AuthDES(key, iv);
+            string DES_DecryptStr = string.Empty;
+            try
+            {
+                DES_DecryptStr = objDes.DecryptDES(DataContent);
+            }
+            catch
+            {
+                DES_DecryptStr = string.Empty;
+            }
+            return DES_DecryptStr;
         }
 
         private HttpTrx ReplyAVCONPLY(string username, string devicetype, AACONREQ avconreq)

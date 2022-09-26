@@ -10,6 +10,7 @@ namespace AuthenticationAPI.DtoS
        
         public string Credential { get; set; }
         public string SignedPublicKey { get; set; }
+        public string DeviceUUID { get; set; }
 
 
         public ARWSCANN()
@@ -17,7 +18,7 @@ namespace AuthenticationAPI.DtoS
 
             Credential = string.Empty;
             SignedPublicKey = string.Empty;
-           
+            DeviceUUID = string.Empty;
         }
     }
 }

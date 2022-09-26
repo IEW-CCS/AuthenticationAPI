@@ -223,6 +223,7 @@ namespace AuthenticationAPI.Controllers
             ARWSCANN wsuidann = new ARWSCANN();
             wsuidann.Credential = credentialcontent.CredContent;
             wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
+            wsuidann.DeviceUUID = "20220926_TEST";
             string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);
 
             WebSocketReply = new WSTrx();
