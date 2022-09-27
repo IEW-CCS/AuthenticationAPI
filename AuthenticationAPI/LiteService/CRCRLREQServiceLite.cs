@@ -85,7 +85,7 @@ namespace AuthenticationAPI.Service
                     return HttpReply;
                 }
 
-                CCredReply.CredentialSign = card.CredSign;
+                CCredReply.CredentialSign = card.CredSign.Substring(0,8);
 
                 string CCredReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(CCredReply);
                 HttpReply = new HttpTrx();

@@ -55,7 +55,8 @@ namespace AuthenticationAPI.Manager
         public void SetRSASecurity(string Key, string Type, AuthSecurity Obj)
         {
             string RSAKey = string.Concat(Key, "_", Type);
-          
+            //---- 20220927 ----
+            this.RSADict.AddOrUpdate(RSAKey, Obj, (key, oldvalue) => Obj);
         }
 
 

@@ -183,7 +183,7 @@ namespace AuthenticationAPI.Service
         {
             //---暫時 Always Return True 以後有想到邏輯再補上
 
-            bool result = apregcmp.Result == "true" ? true : false;
+            bool result = apregcmp.Result == "OK" ? true : false;
             return result;
         }
 

@@ -130,7 +130,7 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.ARREGCMP:
                             {
-                                var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.ARREGCMP_Lite.ToString()).FirstOrDefault();
+                                var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == TransService.ARREGCMP.ToString()).FirstOrDefault();
                                 if (HandleAREGCMP != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
@@ -222,6 +222,7 @@ namespace AuthenticationAPI.Controllers
 
             ARWSCANN wsuidann = new ARWSCANN();
             wsuidann.Credential = credentialcontent.CredContent;
+            wsuidann.CredentialSign = credentialcontent.CredSign.Substring(0, 8);
             wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
             wsuidann.DeviceUUID = "20220926_TEST";
             string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);

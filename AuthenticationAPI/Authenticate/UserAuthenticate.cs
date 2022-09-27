@@ -50,7 +50,8 @@ namespace AuthenticationAPI.Authenticate
                 {
                     using (var db = new DBContext.MetaDBContext(provider, connectstring))
                     {
-                        securityPssword = objDes.EncryptDES(userinfo.PassWord);
+                        //securityPssword = objDes.EncryptDES(userinfo.PassWord);
+                        securityPssword = userinfo.PassWord;
                         var user = db.auth_info.AsQueryable().Where(o => o.username == userinfo.UserName && o.password == securityPssword).FirstOrDefault();
                         if (user != null)
                         {

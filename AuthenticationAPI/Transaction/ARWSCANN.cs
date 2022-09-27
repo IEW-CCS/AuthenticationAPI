@@ -9,6 +9,7 @@ namespace AuthenticationAPI.DtoS
     {
        
         public string Credential { get; set; }
+        public string CredentialSign { get; set; }
         public string SignedPublicKey { get; set; }
         public string DeviceUUID { get; set; }
 
@@ -17,6 +18,7 @@ namespace AuthenticationAPI.DtoS
         {
 
             Credential = string.Empty;
+            CredentialSign = string.Empty;
             SignedPublicKey = string.Empty;
             DeviceUUID = string.Empty;
         }

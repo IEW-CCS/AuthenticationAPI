@@ -45,10 +45,9 @@ namespace AuthenticationAPI
             services.AddSingleton<IHttpTrxService, Service.ARREGCMPService>();
             services.AddSingleton<IHttpTrxService, Service.AAUTHREQService>();
             services.AddSingleton<IHttpTrxService, Service.AAPSWREQService>();
-            services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
+            //services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
 
             services.AddSingleton<IHttpTrxService, Service.AAPSWREQServiceLite>();
-            services.AddSingleton<IHttpTrxService, Service.ARREGCMPServiceLite>();
             services.AddSingleton<IHttpTrxService, Service.AAUTHREQServiceLite>();
             services.AddSingleton<IHttpTrxService, Service.AACONREQServiceLite>();
             services.AddSingleton<IHttpTrxService, Service.CRCRLREQServiceLite>();
@@ -133,8 +132,8 @@ namespace AuthenticationAPI
 
            
             // for LDAP First Initial Run
-            var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
-            bool InitialResult  = LDAPManager.Init();
+            //var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
+            //bool InitialResult  = LDAPManager.Init();
  
             app.UseRouting();
             app.UseAuthentication();
