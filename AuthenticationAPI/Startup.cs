@@ -43,13 +43,11 @@ namespace AuthenticationAPI
             services.AddSingleton<IHttpTrxService, Service.CRUIDRPTService>();
             services.AddSingleton<IHttpTrxService, Service.CRCRLREQService>();
             services.AddSingleton<IHttpTrxService, Service.ARREGCMPService>();
+            services.AddSingleton<IHttpTrxService, Service.AACONREQService>();
             services.AddSingleton<IHttpTrxService, Service.AAUTHREQService>();
             services.AddSingleton<IHttpTrxService, Service.AAPSWREQService>();
             //services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
 
-            services.AddSingleton<IHttpTrxService, Service.AAPSWREQServiceLite>();
-            services.AddSingleton<IHttpTrxService, Service.AAUTHREQServiceLite>();
-            services.AddSingleton<IHttpTrxService, Service.AACONREQServiceLite>();
             services.AddSingleton<IHttpTrxService, Service.CRCRLREQServiceLite>();
             services.AddSingleton<IHttpTrxService, Service.CRUIDRPTServiceLite>();
 

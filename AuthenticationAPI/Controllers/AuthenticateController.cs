@@ -19,8 +19,7 @@ namespace AuthenticationAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [EnableCors("CorsPolicy")]
-    [Authorize(Roles = "Admin, Administrator, Verify")]
-
+    [Authorize(Roles = "Admin, Administrator, Authenticate")]
     public class AuthenticateController : ControllerBase
     {
         private readonly ILogger Logger;
@@ -28,17 +27,17 @@ namespace AuthenticationAPI.Controllers
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private readonly IQueueManager QueueManager;
-        private readonly ILDAPManagement LDAPManager;
+       // private readonly ILDAPManagement LDAPManager;
         private readonly ObjectManager ObjectManagerInstance;
 
-        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager, ILDAPManagement ldapmanager)
+        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
         {
             Logger = logger;
             HttpTrxServices = services;
             Configuration = configuration;
             SecurityManager = securitymanager;
             QueueManager = queuemanager;
-            LDAPManager = ldapmanager;
+           // LDAPManager = ldapmanager;
             ObjectManagerInstance = (ObjectManager)objectmanager.GetInstance;
         }
 
@@ -70,7 +69,7 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.AACONREQ:
                             {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.AACONREQ_Lite.ToString()).FirstOrDefault();
+                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransService.AACONREQ.ToString()).FirstOrDefault();
                                 if (HandleAPVRYREQ != null)
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
@@ -94,7 +93,7 @@ namespace AuthenticationAPI.Controllers
 
                         case ProcessStep.AAUTHREQ:
                             {
-                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.AAUTHREQ_Lite.ToString()).FirstOrDefault();
+                                var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransService.AAUTHREQ.ToString()).FirstOrDefault();
                                 if (HandleAPVRYREQ != null)
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
@@ -119,16 +118,16 @@ namespace AuthenticationAPI.Controllers
                      
                         case ProcessStep.AAPSWREQ:
                             {
-                                var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.AAPSWREQ_Lite.ToString()).FirstOrDefault();
+                                var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == TransService.AAPSWREQ.ToString()).FirstOrDefault();
                                 if (HandleAPHPWREQ != null)
                                 {
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
                                     Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
                                     HttpReply = HandleAPHPWREQ.HandlepHttpTrx(Msg);
-                                    if (HttpReply.returncode == 0)
+                                   /* if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
-                                        string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
+                                         string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
                                         if (hashPassword != string.Empty)
                                         {
                                             LDAPPWChange(UserName, hashPassword);
@@ -140,7 +139,7 @@ namespace AuthenticationAPI.Controllers
                                             int RTCode = (int)HttpAuthErrorCode.HashPasswordCreateError;
                                             HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                                         }
-                                    }
+                                    }*/
                                 }
                                 else
                                 {
@@ -200,7 +199,8 @@ namespace AuthenticationAPI.Controllers
             bool result = false;
             try
             {
-                  result = LDAPManager.ModifyUserPassword(UserName, hashPassword);
+                result = true;
+                //result = LDAPManager.ModifyUserPassword(UserName, hashPassword);
             }
             catch(Exception ex)
             {

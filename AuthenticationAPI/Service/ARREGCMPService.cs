@@ -121,7 +121,11 @@ namespace AuthenticationAPI.Service
                 ARREGFIN APRegFinish = new ARREGFIN();
                 APRegFinish.AuthenticationToken = GenerateVerifyJWTToken(username);
                 APRegFinish.AuthenticationURL = Configuration["Server:HttpAuthServiceURL"];
-               
+
+
+                Logger.LogInformation("URL = " + APRegFinish.AuthenticationURL);
+                Logger.LogInformation("Token = " + APRegFinish.AuthenticationToken);
+
                 string ARRegFinishJsonStr = JsonSerializer.Serialize(APRegFinish);
 
                 AuthDES DES = new AuthDES();
@@ -134,7 +138,8 @@ namespace AuthenticationAPI.Service
 
                 string ECSEncryptRetMsg = string.Empty;
                 string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
+                string SignStr = string.Empty;
+                string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, devicetype, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
 
                 if (ECSEncryptStr == string.Empty)
                 {
@@ -153,7 +158,7 @@ namespace AuthenticationAPI.Service
                     HttpReply.returnmsg = string.Empty;
                     HttpReply.datacontent = DataContentDES;
                     HttpReply.ecs = ECSEncryptStr;
-                    HttpReply.ecssign = string.Empty;
+                    HttpReply.ecssign = SignStr;
 
                 }
             }
@@ -195,14 +200,14 @@ namespace AuthenticationAPI.Service
                new Claim(JwtRegisteredClaimNames.NameId,UserName)
             };
 
-            claims.Add(new Claim(ClaimTypes.Role, "Verify"));
+            claims.Add(new Claim(ClaimTypes.Role, "Authenticate"));
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:KEY"]));
             var jwt = new JwtSecurityToken
             (
                 issuer: Configuration["JWT:Issuer"],
                 audience: Configuration["JWT:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMonths(3),
+                expires: DateTime.Now.AddMonths(6),
                 signingCredentials: new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256)
             );
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);

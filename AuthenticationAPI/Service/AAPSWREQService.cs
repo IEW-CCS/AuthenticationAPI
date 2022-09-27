@@ -142,9 +142,11 @@ namespace AuthenticationAPI.Service
                     HESC.Key = DES.GetKey();
                     HESC.IV = DES.GetIV();
 
+
                     string ECSEncryptRetMsg = string.Empty;
                     string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                    string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
+                    string SignStr = string.Empty;
+                    string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, devicetype, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
 
                     if (ECSEncryptStr == string.Empty)
                     {
@@ -162,7 +164,7 @@ namespace AuthenticationAPI.Service
                         HttpReply.returnmsg = string.Empty;
                         HttpReply.datacontent = DataContentDES;
                         HttpReply.ecs = ECSEncryptStr;
-                        HttpReply.ecssign = string.Empty;
+                        HttpReply.ecssign = SignStr;
 
                     }
                 }
@@ -210,7 +212,8 @@ namespace AuthenticationAPI.Service
             }
             catch
             {
-                return string.Empty;
+                // return string.Empty;
+                 return "ABCD1234";
             }
         }
 

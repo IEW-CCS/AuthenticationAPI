@@ -39,6 +39,7 @@ namespace AuthenticationAPI.Kernel
             _credential = new ConcurrentDictionary<string, Credential>();
             _registerStatus = new ConcurrentDictionary<string, string>();
             _hashPassword = new ConcurrentDictionary<string, string>();
+            _verifyStatus = new ConcurrentDictionary<string, string>();
         }
 
         public Credential_Info GetCredInfo(string Key)

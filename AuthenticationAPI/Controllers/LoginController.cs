@@ -1,5 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using AuthenticationAPI.DtoS;
 using AuthenticationAPI.Service;
@@ -7,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace AuthenticationAPI.Controllers
 {
@@ -55,6 +61,6 @@ namespace AuthenticationAPI.Controllers
         public string noAccess()
         {
             return "沒有權限";
-        }
+        } 
     }
 }
