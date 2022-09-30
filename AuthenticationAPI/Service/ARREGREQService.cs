@@ -1,5 +1,4 @@
-﻿using AuthenticationAPI.Controllers;
-using AuthenticationAPI.DtoS;
+﻿using AuthenticationAPI.DtoS;
 using AuthenticationAPI.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -8,30 +7,30 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json;
 using AuthenticationAPI.Kernel;
 using AuthenticationAPI.DBContext;
+using AuthenticationAPI.Authenticate;
 
 namespace AuthenticationAPI.Service
 {
    
     public class ARREGREQService : IHttpTrxService
     {
-        private string _SeviceName = TransService.ARREGREQ.ToString();
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
+        private readonly IEnumerable<IAuthenticate> Authenticates;
         private ObjectManager ObjectManagerInstance = null;
 
-        public ARREGREQService(ILogger<ARREGREQService> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public ARREGREQService(ILogger<ARREGREQService> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager, IEnumerable<IAuthenticate>  authenticates)
         {
             Logger = logger;
             Configuration = configuration;
             SecurityManager = securitymanager;
+            Authenticates = authenticates;
             ObjectManagerInstance = (ObjectManager)objectmanager.GetInstance;
         }
 
@@ -39,7 +38,7 @@ namespace AuthenticationAPI.Service
         {
             get
             {
-                return this._SeviceName;
+                return TransService.ARREGREQ.ToString();
             }
         }
 
@@ -53,29 +52,27 @@ namespace AuthenticationAPI.Service
             if (username == string.Empty)
             {
                 int RTCode = (int)HttpAuthErrorCode.UserNotExist;
-                HttpReply = HttpReplyNG.Trx(replyProcessStep,RTCode);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                 return HttpReply;
             }
             else if (Msg.procstep != ProcessStep.ARREGREQ.ToString())
             {
                 int RTCode = (int)HttpAuthErrorCode.ProcStepNotMatch;
-                HttpReply = HttpReplyNG.Trx(replyProcessStep,RTCode);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                 return HttpReply;
             }
             else
             {
-                //---- First Time Use BaseDES
-                string DecrypStr = this.DecryptBaseDESData(Msg.datacontent);
+                string DecrypStr = this.DecryptBaseDES(Msg.datacontent);
                 if (DecrypStr == string.Empty)
                 {
                     int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                    HttpReply = HttpReplyNG.Trx(replyProcessStep,RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                     return HttpReply;
                 }
                 else
                 {
-                    ARREGREQ apregreq = DeserializeObj._APREGREQ(DecrypStr);
-                    if (apregreq == null)
+                    if (!DeserializeObj.TryParseJson(DecrypStr, out ARREGREQ apregreq))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                         HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
@@ -84,7 +81,7 @@ namespace AuthenticationAPI.Service
                     else
                     {
                         string returnMsg = string.Empty;
-                        if (this.CheckAuth(username, apregreq, out returnMsg) != true)
+                        if (CheckAuthUserInfo(username, apregreq, out returnMsg) == false)
                         {
                             int RTCode = (int)HttpAuthErrorCode.CheckAuthFailed;
                             HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode, returnMsg);
@@ -94,13 +91,13 @@ namespace AuthenticationAPI.Service
                         {
                             if (Handle_AREGREQ(username, devicetype,  apregreq) == false)
                             {
-                                int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                                int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
                                 HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                                 return HttpReply;
                             }
                             else
                             {
-                                HttpReply = this.ReplyAPREGPLY(username, devicetype, apregreq);
+                                HttpReply = ReplyAPREGPLY(username, devicetype, apregreq);
                                 return HttpReply;
                             } 
                         }
@@ -109,35 +106,92 @@ namespace AuthenticationAPI.Service
             }
         }
 
+        // ---- In First Time Reg User BaseDES ----
+        private string DecryptBaseDES(string DataContent)
+        {
+            string DecryptStr = string.Empty;
+            try
+            {
+                AuthBaseDES objDes = new AuthBaseDES();
+                DecryptStr = objDes.DecryptDES(DataContent);
+            }
+            catch
+            {
+                DecryptStr = string.Empty;
+            }
+            return DecryptStr;
+        }
+
+        //----- Call AuthenticateService Check User Info ------
+        private bool CheckAuthUserInfo (string username, ARREGREQ apregreq, out string RetMsg)
+        {
+            RetMsg = string.Empty;
+            var UserPassword_Auth = Authenticates.Where( a => a.AuthenticateName == AuthenticateService.USERINFO.ToString() ).FirstOrDefault();
+            try
+            {
+                if (UserPassword_Auth != null)
+                {
+                    UserInfo userinfo = new UserInfo(username, apregreq.PassWord);
+                    return UserPassword_Auth.CheckAuth(userinfo, out RetMsg);
+                }
+                else
+                {
+                    Logger.LogError("USERINFO Service Not Register, so can be Handle.");
+                    RetMsg = "Authenticate Service not Register.";
+                    return false;
+                }
+            }
+            catch( Exception ex)
+            {
+                Logger.LogError("USERINFO Process Exception, Msg = " + ex.Message) ;
+                RetMsg = "Authenticate Service Exception.";
+                return false; ;
+            }
+        }
         private bool Handle_AREGREQ(string username, string devicetype, ARREGREQ apreqreg)
         {
+            /* Handle AREGREQ 主要功能都在於 Update RSA Key 
+             * UUID 
+             * Create Credential Infomation              */
+
             bool result = false;
             try
             {
-                SecurityManager.GetRSASecurity(username, devicetype).ClientID = username;
-                SecurityManager.GetRSASecurity(username, devicetype).ClientPublicKey = apreqreg.ClientRSAPublicKey;
-                SecurityManager.UpdateAuthSecurityToDB(username, devicetype);
-                UpdateCredInfo(username, apreqreg.APPGuid, apreqreg.APPVersion);
-                UpdateDeviceInfo(apreqreg.DeviceMacAddress);
+                UpdateSecurityManager(username, devicetype, apreqreg.ClientRSAPublicKey);
+                CreateCredentialInfo(username, apreqreg.APPGuid, apreqreg.APPVersion);
+                InsertDeviceMacInfo(apreqreg.DeviceMacAddress);
                 result = true;
             }
             catch (Exception ex)
             {
                 result = false;
-                Logger.LogError("Handle DUUID Report Error, Msg = " + ex.Message);
+                Logger.LogError("Handle AREGREQ  Error, Msg = " + ex.Message);
             }
             return result;
+        }
+
+        private void UpdateSecurityManager (string username, string devicetype, string clientPublicKey)
+        {
+            try
+            {
+                SecurityManager.GetRSASecurity(username, devicetype).ClientID = username;
+                SecurityManager.GetRSASecurity(username, devicetype).ClientPublicKey = clientPublicKey;
+                SecurityManager.UpdateAuthSecurityToDB(username, devicetype);
+            }
+            catch(Exception ex)
+            {
+                throw new Exception("Update Security Manager Error, Msg = " + ex.Message );
+            }
         }
 
         private HttpTrx ReplyAPREGPLY(string UserName, string DeviceType, ARREGREQ apregreq)
         {
             HttpTrx HttpReply = null;
             string replyProcessStep = ProcessStep.ARREGPLY.ToString();
-           
             try
             {
                 ARREGPLY ARRegReply = new ARREGPLY();
-                ARRegReply.HttpToken = GenerateJWTToken(UserName);
+                ARRegReply.HttpToken = GenerateJWTTokenRegister(UserName);
                 ARRegReply.ServerName = Configuration["Server:ServerName"];
                 ARRegReply.HttpServiceURL = Configuration["Server:HttpRegisterServiceURL"];
                 ARRegReply.WSServiceURL = Configuration["Server:WSServiceURL"];
@@ -152,9 +206,8 @@ namespace AuthenticationAPI.Service
                 HESC.Key = DES.GetKey();
                 HESC.IV = DES.GetIV();
 
-                string ECSEncryptRetMsg = string.Empty;
                 string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(UserName, DeviceType, HESCJsonStr, out ECSEncryptRetMsg);
+                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(UserName, DeviceType, HESCJsonStr, out string ECSEncryptRetMsg);
 
                 if (ECSEncryptStr == string.Empty)
                 {
@@ -163,7 +216,6 @@ namespace AuthenticationAPI.Service
                     HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
                     return HttpReply;
                 }
-
                 else
                 {
                     HttpReply = new HttpTrx();
@@ -184,25 +236,8 @@ namespace AuthenticationAPI.Service
             }
         }
 
-      
-
-        private string DecryptBaseDESData(string DataContent)
-        {
-            AuthBaseDES objDes = new AuthBaseDES();
-            string DES_DecryptStr = string.Empty;
-            try
-            {
-                DES_DecryptStr = objDes.DecryptDES(DataContent);
-            }
-            catch
-            {
-                DES_DecryptStr = string.Empty;
-            }
-            return DES_DecryptStr;
-        }
-
         // Generate Http Jwt Token ...
-        private string GenerateJWTToken(string UserName)
+        private string GenerateJWTTokenRegister(string UserName)
         {
             var claims = new List<Claim>
             {
@@ -223,42 +258,34 @@ namespace AuthenticationAPI.Service
             return token.ToString();
         }
 
-        private bool CheckAuth(string username, ARREGREQ apregreq, out string RetMsg)
+        private void CreateCredentialInfo(string name, string appGuid, string appVersion)
         {
-            RetMsg = string.Empty;
-            return true;
-            /*
-             *   最後Call 這個 Interface 對應 
-             *   UserAuthenticate
-             */
-        }
-
-        private void UpdateCredInfo(string name, string appGuid, string appVersion)
-        {
-            var cred = ObjectManagerInstance.GetCredInfo(name);
-            cred.UserName = name;
-            cred.APPGuid = appGuid;
-            cred.APPVersion = appVersion;
-            ObjectManagerInstance.SetCredInfo(name, cred);
-        }
-
-        private void UpdateDeviceInfo( string deviceNo)
-        {
-            string provider = Configuration["ConnectionStrings:Provider"];
-            string connectstring = Configuration["ConnectionStrings:DefaultConnection"];
             try
             {
-                using (var db = new DBContext.MetaDBContext(provider, connectstring))
-                {
-                    AUTH_DEVICE DeviceInfo = new AUTH_DEVICE();
-                    DeviceInfo.device = deviceNo;
-                    db.auth_device.Add(DeviceInfo);
-                    db.SaveChanges();
-                }
+                Credential_Info cred = new Credential_Info();
+                cred.UserName = name;
+                cred.APPGuid = appGuid;
+                cred.APPVersion = appVersion;
+                cred.DeviceUUID = string.Empty;
+                cred.Nonce = 0;
+                cred.CreateDateTime = DateTime.Now;
+                ObjectManagerInstance.SetCredInfo(name, cred);
             }
             catch (Exception ex)
             {
-                Logger.LogWarning("Device Info Upload Exception, Msg = " + ex.Message);
+                throw new Exception("Create Credential Info Exception, Msg = " + ex.Message);
+            }
+        }
+
+        private void InsertDeviceMacInfo(string DeviceMacAddress)
+        {
+            try
+            {
+                ObjectManagerInstance.SetDeviceMACInfo(DeviceMacAddress);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Insert Device Info Exception, Msg = " + ex.Message);
             }
         }
     }

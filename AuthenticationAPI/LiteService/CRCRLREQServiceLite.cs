@@ -54,7 +54,7 @@ namespace AuthenticationAPI.Service
             {
                 if (Handle_CCREDREQ(_userName, _deviceType) == false)
                 {
-                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                    int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                     return HttpReply;
                 }

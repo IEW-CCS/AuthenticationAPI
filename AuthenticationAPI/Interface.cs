@@ -7,16 +7,25 @@ using System.Threading.Tasks;
 
 namespace AuthenticationAPI
 {
-
     public interface IHttpTrxService
     {
         string ServiceName
         {
             get;
         }
-
         public HttpTrx HandlepHttpTrx(HttpTrx Msg);
     }
+
+    public interface IAuthenticate
+    {
+        string AuthenticateName
+        {
+            get;
+        }
+        bool CheckAuth(object Obj, out string RetMsg);
+    }
+
+
 
     interface IManagement
     {
@@ -27,16 +36,7 @@ namespace AuthenticationAPI
 
     
     }
-
-
-    interface IAuthenticate
-    {
-        string AuthenticateName
-        {
-            get;
-        }
-        bool CheckAuth(object Obj, out string RetMsg);
-    }
+  
 
 
     public interface ILDAPManagement
@@ -71,6 +71,7 @@ namespace AuthenticationAPI
 
     public interface IObjectManager
     {
+        void InitFromDB(string Type, string ConnectionStr);
         object GetInstance
         {
             get;
@@ -80,11 +81,6 @@ namespace AuthenticationAPI
 
     public interface ISecurityManager
     {
-        string ManageName
-        {
-            get;
-        }
-
         public void InitFromDB(string Type, string ConnectionStr);
         public void UpdateAuthSecurityToDB(string username, string devicetype);
         public AuthSecurity GetRSASecurity(string Key, string Type);
@@ -94,7 +90,6 @@ namespace AuthenticationAPI
         public string DecryptByPrivateKey(string Key, string Type, string Content);
         public string Encrypt_Sign(string Key, string Type, string Content, out string signString, out string returnMsg);
         public string Decrypt_Check(string Key, string Type, string Content, string signString, out string returnMsg);
-
     }
 
 }

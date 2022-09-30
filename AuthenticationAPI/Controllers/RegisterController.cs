@@ -47,13 +47,12 @@ namespace AuthenticationAPI.Controllers
         [EnableCors("CorsPolicy")]
         public HttpTrx Post([FromBody] HttpTrx Msg)
         {
-
             HttpTrx HttpReply = null;
             string UserName = Msg.username;
             string DeviceType = Msg.devicetype;
             string ProcStep = Msg.procstep;
 
-            if (CheckProcStep(ProcStep) == false)
+            if (CheckProcStep(UserName, ProcStep) == false)
             {
                 string ReplyProcessStep = ProcessStep.STEP_ERR.ToString();
                 int RTCode = (int)HttpAuthErrorCode.ProcStepNotMatch;
@@ -73,11 +72,9 @@ namespace AuthenticationAPI.Controllers
                                 if (HandleDUUIDRPT != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
-
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                                    Logger.LogInformation(String.Format("[Register] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.", Msg.username, Msg.devicetype, Msg.procstep, httpTrxMsg));
                                     HttpReply = HandleDUUIDRPT.HandlepHttpTrx(Msg);
-
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
@@ -85,10 +82,10 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.CRUIDPLY.ToString();
-                                    Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
+                                    Logger.LogError("CRUIDRPT Service Not Register, so can be Handle.");
+                                    string ReplyProcessStep = ProcessStep.CRUIDPLY.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
                             }
@@ -99,31 +96,30 @@ namespace AuthenticationAPI.Controllers
                                 if (HandleCREDREQ != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
-
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                                    Logger.LogInformation(String.Format("[Register] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.", Msg.username, Msg.devicetype, Msg.procstep, httpTrxMsg));
                                     HttpReply = HandleCREDREQ.HandlepHttpTrx(Msg);
-                                  
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
                                         Credential Cred = ObjectManagerInstance.GetCredential(UserName);
-                                        if (Cred != null )
+                                        Credential_Info  CredInfo = ObjectManagerInstance.GetCredInfo(UserName);
+                                        if (Cred != null && CredInfo != null)
                                         {
-                                            WebSocketUIDAnnounce(UserName, Cred);
+                                            WebSocketUIDAnnounce(UserName, Cred, CredInfo);
                                         }
                                         else
                                         {
-                                            Logger.LogError("User = " + UserName + "Credential Information is Empty , With Empty, So Skip Handle.");
+                                            Logger.LogError(string.Format("User = {0}, Credential Information is Empty , So Skip Handle.", UserName));
                                         }
                                     }
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.CRCRLPLY.ToString();
-                                    Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
+                                    Logger.LogError("CRUIDRPT Service Not Register, so can be Handle.");
+                                    string ReplyProcessStep = ProcessStep.CRCRLPLY.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
                             }
@@ -134,11 +130,9 @@ namespace AuthenticationAPI.Controllers
                                 if (HandleAREGCMP != null)
                                 {
                                     ObjectManagerInstance.SetRegisterStatus(UserName, ProcStep);
-
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                                    Logger.LogInformation(String.Format("[Register] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.", Msg.username, Msg.devicetype, Msg.procstep, httpTrxMsg));
                                     HttpReply = HandleAREGCMP.HandlepHttpTrx(Msg);
-
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
@@ -146,10 +140,10 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.ARREGFIN.ToString();
-                                    Logger.LogInformation("ERROR !! APREGCMP Not Register.");
+                                    Logger.LogError("ARREGCMP Service Not Register, so can be Handle.");
+                                    string ReplyProcessStep = ProcessStep.ARREGFIN.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
                             }
@@ -173,22 +167,11 @@ namespace AuthenticationAPI.Controllers
         }
 
 
-        //--------  TryPaser Json File Call 法 --------
-        //  if (TryParseJson(DecryptVryopeData, out clsVryope tmpVryopeData)) 
-        public bool TryParseJson<T>(string data, out T result)
-        {
-            bool success = true;
-            var settings = new Newtonsoft.Json.JsonSerializerSettings
-            {
-                Error = (sender, args) => { success = false; args.ErrorContext.Handled = true; },
-                MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Error
-            };
-            result = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(data, settings);
-            return success;
-        }
 
-        private bool CheckProcStep(string procStep)
+        private bool CheckProcStep(string username, string procStep)
         {
+            //---------  20220930 ------
+            //=========  在未來加入 Process Step Control ========
             bool result = false;
             try
             {
@@ -214,7 +197,7 @@ namespace AuthenticationAPI.Controllers
 
 
 
-        private void WebSocketUIDAnnounce(string username, Credential credentialcontent)
+        private void WebSocketUIDAnnounce(string username, Credential credentialcontent, Credential_Info credentialInfo)
         {
             WSTrx WebSocketReply = null;
             string ReplyProcStep = ProcessStep.ARWSCANN.ToString();
@@ -224,7 +207,7 @@ namespace AuthenticationAPI.Controllers
             wsuidann.Credential = credentialcontent.CredContent;
             wsuidann.CredentialSign = credentialcontent.CredSign.Substring(0, 8);
             wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
-            wsuidann.DeviceUUID = "20220926_TEST";
+            wsuidann.DeviceUUID = credentialInfo.DeviceUUID;
             string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);
 
             WebSocketReply = new WSTrx();
@@ -238,7 +221,7 @@ namespace AuthenticationAPI.Controllers
             SendWebsocket(username, string.Empty, WSReplyJsonStr);
 
 
-            /*  20220915 封存
+            /*  20220915 封存 With 加密程序
              * try
                {
                    WSUIDANN wsuidann = new WSUIDANN();

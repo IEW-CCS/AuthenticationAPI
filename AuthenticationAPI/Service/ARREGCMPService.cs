@@ -67,8 +67,7 @@ namespace AuthenticationAPI.Service
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
+                    if (!DeserializeObj.TryParseJson(DecryptECS, out ECS HESC))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                         HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -85,8 +84,7 @@ namespace AuthenticationAPI.Service
                         }
                         else
                         {
-                            ARREGCMP apregcmp = DeserializeObj._APREGCMP(DecrypContent);
-                            if (apregcmp == null)
+                            if (!DeserializeObj.TryParseJson(DecrypContent, out ARREGCMP arregcmp))
                             {
                                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                                 HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -94,15 +92,15 @@ namespace AuthenticationAPI.Service
                             }
                             else
                             {
-                                if (Handle_APREGCMP(_userName, _deviceType, apregcmp) == false)
+                                if (Handle_APREGCMP(_userName, _deviceType, arregcmp) == false)
                                 {
-                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                                    int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                                     return HttpReply;
                                 }
                                 else
                                 {
-                                    HttpReply = ReplyAPREGFIN(_userName, _deviceType, apregcmp);
+                                    HttpReply = ReplyAPREGFIN(_userName, _deviceType, arregcmp);
                                     return HttpReply;
                                 }
                             }

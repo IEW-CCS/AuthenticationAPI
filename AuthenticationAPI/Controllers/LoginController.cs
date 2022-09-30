@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 using AuthenticationAPI.DtoS;
 using AuthenticationAPI.Service;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 
 namespace AuthenticationAPI.Controllers
 {
@@ -24,7 +18,6 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly ILogger Logger;
         private readonly IEnumerable<IHttpTrxService> HttpTrxServices;
-
         public LoginController(ILogger<LoginController> logger, IEnumerable<IHttpTrxService> httptrxServices)
         {
             Logger = logger;
@@ -34,19 +27,20 @@ namespace AuthenticationAPI.Controllers
         [HttpPost("regLogin")]
         public HttpTrx regLogin(HttpTrx Msg)
         {
+            // 抽出 ARREGREQ Service
             var HandleAPREGREG = HttpTrxServices.Where(s => s.ServiceName == TransService.ARREGREQ.ToString()).FirstOrDefault();
             if (HandleAPREGREG != null)
             {
                 string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                Logger.LogInformation(String.Format("[Login] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.",Msg.username,Msg.devicetype, Msg.procstep, httpTrxMsg));
                 return HandleAPREGREG.HandlepHttpTrx(Msg);
             }
             else
             {
-                string _replyProcessStep = ProcessStep.ARREGPLY.ToString();
-                Logger.LogInformation("ERROR !! APREGREQ Not Register.");
+                Logger.LogError("APREGREQ Service Not Register, so can be Handle.");
+                string ReplyProcessStep = ProcessStep.ARREGPLY.ToString();
                 int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                HttpTrx HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                HttpTrx HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                 return HttpReply;
             }
         }

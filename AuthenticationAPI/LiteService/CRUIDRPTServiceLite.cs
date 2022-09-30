@@ -13,8 +13,6 @@ namespace AuthenticationAPI.Service
 {
     public class CRUIDRPTServiceLite : IHttpTrxService
     {
-        private string _SeviceName = TransServiceLite.CRUIDRPT_Lite.ToString();
-
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
@@ -32,57 +30,84 @@ namespace AuthenticationAPI.Service
         {
             get
             {
-                return this._SeviceName;
+                return TransServiceLite.CRUIDRPT_Lite.ToString();
             }
         }
         public HttpTrx HandlepHttpTrx(HttpTrx Msg)
         {
 
             HttpTrx HttpReply = null;
+            string replyProcessStep = ProcessStep.CRUIDPLY.ToString();
+            string userName = Msg.username;
+            string deviceType = Msg.devicetype;
 
-            string _replyProcessStep = ProcessStep.CRUIDPLY.ToString();
-            string _userName = Msg.username;
-            string _deviceType = Msg.devicetype;
-
-            if (_userName == string.Empty)
+            if (userName == string.Empty)
             {
                 int RTCode = (int)HttpAuthErrorCode.UserNotExist;
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                 return HttpReply;
             }
             else
             {
-                CRUIDRPT uuidrpt = DeserializeObj._DUUIDRPT(Msg.datacontent);
-                if (uuidrpt == null)
+                if (!DeserializeObj.TryParseJson(Msg.datacontent, out CRUIDRPT cruidrpt))
                 {
                     int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                     return HttpReply;
                 }
                 else
                 {
 
-                    if (Handle_DUUIDRPT(_userName, _deviceType, uuidrpt) == false)
+                    if (Handle_DUUIDRPT(userName, deviceType, cruidrpt) == false)
                     {
-                        int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
-                        HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                        int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
+                        HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
                     {
-                        HttpReply = this.ReplyDUUIDACK(_userName, _deviceType, uuidrpt);
+                        HttpReply = ReplyCRUIDACK(userName, deviceType, cruidrpt);
                         return HttpReply;
                     }
                 }
             }
         }
+        private bool Handle_DUUIDRPT(string username, string devicetype, CRUIDRPT cruidrpt)
+        {
+            bool result = false;
+            try
+            {
+                SetUIDInfo(username, cruidrpt.DeviceUUIDJSon);
+                result = true;
+            }
+            catch (Exception ex)
+            {
+                result = false;
+                Logger.LogError("Handle CRUIDRPT Report Error, Msg = " + ex.Message);
+            }
+            return result;
 
+        }
 
-        private HttpTrx ReplyDUUIDACK(string username, string devicetype, CRUIDRPT duuidrt)
+        private void SetUIDInfo(string username, string DeviceUUIDJSon)
+        {
+            try
+            {
+                var objCredential = ObjectManagerInstance.GetCredInfo(username);
+                objCredential.DeviceUUID = DeviceUUIDJSon;
+                ObjectManagerInstance.SetCredInfo(username, objCredential);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Set UID Info to Object Manager Error, Msg = " + ex.Message);
+            }
+        }
+
+        private HttpTrx ReplyCRUIDACK(string username, string devicetype, CRUIDRPT duuidrt)
         {
             HttpTrx HttpReply = new HttpTrx();
             CRUIDPLY uuidack = new CRUIDPLY();
-            string _replyProcessStep = ProcessStep.CRUIDPLY.ToString();
+            string replyProcessStep = ProcessStep.CRUIDPLY.ToString();
             try
             {
                 uuidack.ServerName = Configuration["Server:ServerName"];
@@ -92,7 +117,7 @@ namespace AuthenticationAPI.Service
                 HttpReply = new HttpTrx();
                 HttpReply.username = username;
                 HttpReply.devicetype = DeviceType.MOBILE.ToString();
-                HttpReply.procstep = _replyProcessStep;
+                HttpReply.procstep = replyProcessStep;
                 HttpReply.returncode = 0;
                 HttpReply.returnmsg = string.Empty;
                 HttpReply.datacontent = UUIDReplyJsonStr;
@@ -101,29 +126,9 @@ namespace AuthenticationAPI.Service
             }
             catch (Exception ex)
             {
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, ex);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, ex);
             }
             return HttpReply;
-        }
-
-       
-        private bool Handle_DUUIDRPT(string username, string devicetype, CRUIDRPT uuidrpt)
-        {
-            bool result = false;
-            try
-            {
-                var objCredential = ObjectManagerInstance.GetCredInfo(username);
-                objCredential.DeviceUUID = uuidrpt.DeviceUUIDJSon;
-                ObjectManagerInstance.SetCredInfo(username, objCredential);
-                result = true;
-            }
-            catch (Exception ex)
-            {
-                result = false;
-                Logger.LogError("Handle DUUID Report Error, Msg = " + ex.Message);
-            }
-            return result;
-
         }
     }
 }

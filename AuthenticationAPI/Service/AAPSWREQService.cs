@@ -66,8 +66,7 @@ namespace AuthenticationAPI.Service
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
+                    if (!DeserializeObj.TryParseJson(DecryptECS, out ECS HESC))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                         HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -84,8 +83,7 @@ namespace AuthenticationAPI.Service
                         }
                         else
                         {
-                            AAPSWREQ aphpwreq = DeserializeObj._AHPWREQ(DecrypContent);
-                            if (aphpwreq == null)
+                            if (!DeserializeObj.TryParseJson(DecrypContent, out AAPSWREQ aphpwreq))
                             {
                                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                                 HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -95,7 +93,7 @@ namespace AuthenticationAPI.Service
                             {
                                 if (Handle_APHPWREQ(_userName, _deviceType, aphpwreq) == false)
                                 {
-                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                                    int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                                     return HttpReply;
                                 }

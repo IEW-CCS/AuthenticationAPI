@@ -128,11 +128,14 @@ namespace AuthenticationAPI
             var SecurityManager =  app.ApplicationServices.GetService<ISecurityManager>();
             SecurityManager.InitFromDB(DBProvider, DBConStr);
 
-           
+            var ObjectManager = app.ApplicationServices.GetService<IObjectManager>();
+            ObjectManager.InitFromDB(DBProvider, DBConStr);
+
+
             // for LDAP First Initial Run
             //var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
             //bool InitialResult  = LDAPManager.Init();
- 
+
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();

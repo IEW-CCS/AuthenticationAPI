@@ -64,8 +64,7 @@ namespace AuthenticationAPI.Service
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
+                    if (!DeserializeObj.TryParseJson(DecryptECS, out ECS HESC))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                         HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
@@ -82,8 +81,7 @@ namespace AuthenticationAPI.Service
                         }
                         else
                         {
-                            AACONREQ avconreq = DeserializeObj._AVCONREQ(DecrypContent);
-                            if (avconreq == null)
+                            if (!DeserializeObj.TryParseJson(DecrypContent, out AACONREQ aaconreq))
                             {
                                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                                 HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
@@ -91,15 +89,15 @@ namespace AuthenticationAPI.Service
                             }
                             else
                             {
-                                if (Handle_AVCONREQ(userName, deviceType, avconreq) == false)
+                                if (Handle_AVCONREQ(userName, deviceType, aaconreq) == false)
                                 {
-                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                                    int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
                                     HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                                     return HttpReply;
                                 }
                                 else
                                 {
-                                    HttpReply = this.ReplyAVCONPLY(userName, deviceType, avconreq);
+                                    HttpReply = this.ReplyAVCONPLY(userName, deviceType, aaconreq);
                                     return HttpReply;
                                 }
                             }

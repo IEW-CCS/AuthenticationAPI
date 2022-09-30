@@ -64,8 +64,7 @@ namespace AuthenticationAPI.Service
                 }
                 else
                 {
-                    ECS HESC = DeserializeObj._ECS(DecryptECS);
-                    if (HESC == null)
+                    if (!DeserializeObj.TryParseJson(DecryptECS, out ECS HESC))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
                         HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -82,8 +81,7 @@ namespace AuthenticationAPI.Service
                         }
                         else
                         {
-                            AAUTHREQ apvryreq = DeserializeObj._APVRYREQ(DecrypContent);
-                            if (apvryreq == null)
+                            if (!DeserializeObj.TryParseJson(DecrypContent, out AAUTHREQ aauthreq))
                             {
                                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
                                 HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
@@ -91,15 +89,15 @@ namespace AuthenticationAPI.Service
                             }
                             else
                             {
-                                if (Handle_APVRYREQ(_userName, _deviceType, apvryreq) == false)
+                                if (Handle_APVRYREQ(_userName, _deviceType, aauthreq) == false)
                                 {
-                                    int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
+                                    int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
                                     HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
                                     return HttpReply;
                                 }
                                 else
                                 {
-                                    HttpReply = ReplyAPVRYPLY(_userName, _deviceType, apvryreq);
+                                    HttpReply = ReplyAPVRYPLY(_userName, _deviceType, aauthreq);
                                     return HttpReply;
                                 }
                             }

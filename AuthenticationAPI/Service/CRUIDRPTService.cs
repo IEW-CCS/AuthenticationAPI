@@ -13,8 +13,6 @@ namespace AuthenticationAPI.Service
 {
     public class CRUIDRPTService : IHttpTrxService
     {
-        private string _SeviceName = TransService.CRUIDRPT.ToString();
-
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
@@ -32,53 +30,50 @@ namespace AuthenticationAPI.Service
         {
             get
             {
-                return this._SeviceName;
+                return TransService.CRUIDRPT.ToString();
             }
         }
         public HttpTrx HandlepHttpTrx(HttpTrx Msg)
         {
-
             HttpTrx HttpReply = null;
+            string replyProcessStep = ProcessStep.CRUIDPLY.ToString();
+            string userName = Msg.username;
+            string deviceType = Msg.devicetype;
 
-            string _replyProcessStep = ProcessStep.CRUIDPLY.ToString();
-            string _userName = Msg.username;
-            string _deviceType = Msg.devicetype;
-
-            if (_userName == string.Empty)
+            if (userName == string.Empty)
             {
                 int RTCode = (int)HttpAuthErrorCode.UserNotExist;
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                 return HttpReply;
             }
             else
             {
-                string DecrypStr = this.DecryptBaseDESData(Msg.datacontent);
+                string DecrypStr = this.DecryptBaseDES(Msg.datacontent);
                 if (DecrypStr == string.Empty)
                 {
                     int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                     return HttpReply;
                 }
                 else
                 {
-                    CRUIDRPT uuidrpt = DeserializeObj._DUUIDRPT(DecrypStr);
-                    if (uuidrpt == null)
+                    if (!DeserializeObj.TryParseJson(DecrypStr, out CRUIDRPT cruidrpt))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                        HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                        HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
                     {
-                        if (Handle_DUUIDRPT(_userName, _deviceType, uuidrpt) == false)
+                        if (Handle_CRUIDRPT(userName, deviceType, cruidrpt) == false)
                         {
-                            int RTCode = (int)HttpAuthErrorCode.ServerProgressError;
-                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                            int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
+                            HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                             return HttpReply;
                         }
                         else
                         {
-                            HttpReply = this.ReplyDUUIDACK(_userName, _deviceType, uuidrpt);
+                            HttpReply = ReplyCRUIDACK(userName, deviceType, cruidrpt);
                             return HttpReply;
                         }
                     }
@@ -86,18 +81,74 @@ namespace AuthenticationAPI.Service
             }
         }
 
+        private string DecryptBaseDES(string DataContent)
+        {
+            AuthBaseDES objDes = new AuthBaseDES();
+            string DES_DecryptStr = string.Empty;
+            try
+            {
+                DES_DecryptStr = objDes.DecryptDES(DataContent);
+            }
+            catch
+            {
+                DES_DecryptStr = string.Empty;
+            }
+            return DES_DecryptStr;
+        }
 
-        private HttpTrx ReplyDUUIDACK(string username, string devicetype, CRUIDRPT duuidrt)
+
+        private bool Handle_CRUIDRPT(string username, string devicetype, CRUIDRPT cruidrpt)
+        {
+            bool result = false;
+            try
+            {
+                UpdateSecurityManager(username, devicetype, cruidrpt.MobilePublicKey);
+                SetUIDInfo(username, cruidrpt.DeviceUUIDJSon);
+                result = true;
+            }
+            catch (Exception ex)
+            {
+                result = false;
+                Logger.LogError("Handle CRUIDRPT Error, Msg = " + ex.Message);
+            }
+            return result;
+        }
+        private void UpdateSecurityManager(string username, string devicetype, string MobilePublicKey)
+        {
+            try
+            {
+                SecurityManager.GetRSASecurity(username, devicetype).ClientID = username;
+                SecurityManager.GetRSASecurity(username, devicetype).ClientPublicKey = MobilePublicKey;
+                SecurityManager.UpdateAuthSecurityToDB(username, devicetype);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Update Security Manager Error, Msg = " + ex.Message);
+            }
+        }
+        private void SetUIDInfo(string username, string DeviceUUIDJSon)
+        {
+            try
+            {
+                var objCredential = ObjectManagerInstance.GetCredInfo(username);
+                objCredential.DeviceUUID = DeviceUUIDJSon;
+                ObjectManagerInstance.SetCredInfo(username, objCredential);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Set UID Info to Object Manager Error, Msg = " + ex.Message);
+            }
+        }
+        private HttpTrx ReplyCRUIDACK(string username, string devicetype, CRUIDRPT duuidrt)
         {
             HttpTrx HttpReply = new HttpTrx();
             CRUIDPLY uuidack = new CRUIDPLY();
-            string _replyProcessStep = ProcessStep.CRUIDPLY.ToString();
+            string replyProcessStep = ProcessStep.CRUIDPLY.ToString();
             try
             {
                 uuidack.ServerName = Configuration["Server:ServerName"];
                 uuidack.ServerPublicKey = SecurityManager.GetRSASecurity(username, devicetype).PublicKey;
  
-
                 string UUIDReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(uuidack);
                 AuthDES DES = new AuthDES();
                 string DataContentDES = DES.EncryptDES(UUIDReplyJsonStr);
@@ -114,7 +165,7 @@ namespace AuthenticationAPI.Service
                 if (ECSEncryptStr == string.Empty)
                 {
                     int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                     HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
                     return HttpReply;
                 }
@@ -122,7 +173,7 @@ namespace AuthenticationAPI.Service
                 {
                     HttpReply = new HttpTrx();
                     HttpReply.username = username;
-                    HttpReply.procstep = _replyProcessStep;
+                    HttpReply.procstep = replyProcessStep;
                     HttpReply.returncode = 0;
                     HttpReply.returnmsg = string.Empty;
                     HttpReply.datacontent = DataContentDES;
@@ -132,49 +183,9 @@ namespace AuthenticationAPI.Service
             }
             catch (Exception ex)
             {
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, ex);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, ex);
             }
             return HttpReply;
-        }
-
-        private string DecryptBaseDESData(string DataContent)
-        {
-            AuthBaseDES objDes = new AuthBaseDES();
-            string DES_DecryptStr = string.Empty;
-            try
-            {
-                DES_DecryptStr = objDes.DecryptDES(DataContent);
-            }
-            catch
-            {
-                DES_DecryptStr = string.Empty;
-            }
-            return DES_DecryptStr;
-        }
-
-
-        private bool Handle_DUUIDRPT(string username, string devicetype, CRUIDRPT uuidrpt)
-        {
-            bool result = false;
-
-            try
-            {
-                SecurityManager.GetRSASecurity(username, devicetype).ClientID = username;
-                SecurityManager.GetRSASecurity(username, devicetype).ClientPublicKey = uuidrpt.MobilePublicKey;
-                SecurityManager.UpdateAuthSecurityToDB(username, devicetype);
-
-                var objCredential = ObjectManagerInstance.GetCredInfo(username);
-                objCredential.DeviceUUID = uuidrpt.DeviceUUIDJSon;
-                ObjectManagerInstance.SetCredInfo(username, objCredential);
-                result = true;
-            }
-            catch (Exception ex)
-            {
-                result = false;
-                Logger.LogError("Handle DUUID Report Error, Msg = " + ex.Message);
-            }
-            return result;
-
         }
     }
 }

@@ -23,13 +23,7 @@ namespace AuthenticationAPI.Manager
         private readonly ILogger<LoginController> Logger; 
         private string _ManagerName = "SecurityManager";
         private ConcurrentDictionary<string, AuthSecurity> RSADict = null;
-        public string ManageName
-        {
-            get
-            {
-                return this._ManagerName;
-            }
-        }
+
 
         public AuthSecurity GetRSASecurity(string Key, string Type)
         {

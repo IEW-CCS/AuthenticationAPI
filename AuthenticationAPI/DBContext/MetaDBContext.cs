@@ -47,5 +47,6 @@ namespace AuthenticationAPI.DBContext
         public DbSet<AUTH_INFO> auth_info { get; set; }
         public DbSet<AUTH_DEVICE> auth_device { get; set; }
         public DbSet<AUTH_SECURITY> auth_security { get; set; }
+        public DbSet<AUTH_CRED> auth_cred { get; set; }
     }
 }

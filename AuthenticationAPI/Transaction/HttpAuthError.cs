@@ -17,7 +17,7 @@ namespace AuthenticationAPI.DtoS
         CreateCredentialError = 8,
         HashPasswordCreateError = 9,
         ServiceNotRegister = 90,
-        ServerProgressError = 91
+        ServiceProgressError = 91
     }
     public class HttpAuthError
     {

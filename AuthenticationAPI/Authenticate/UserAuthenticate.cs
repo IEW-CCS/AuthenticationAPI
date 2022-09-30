@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -11,76 +13,105 @@ namespace AuthenticationAPI.Authenticate
 {
     public class UserInfo
     {
-        public string UserName { get; set; }
-        public string PassWord { get; set; }
+        public UserInfo( string username, string password)
+        {
+            this.UserName = username;
+            this.PassWord = password;
+
+        }
+        public string UserName { get; }
+        public string PassWord { get; }
 
     }
     public class UserAuthenticate : IAuthenticate
     {
-        private string _AuthName = "UserAuth";
-        private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
+        private string Provider = string.Empty;
+        private string Connectstring = string.Empty;
 
         public UserAuthenticate(ILogger<UserAuthenticate> logger, IConfiguration configuration)
         {
-            Logger = logger;
             Configuration = configuration;
+            Provider = Configuration["ConnectionStrings:Provider"];
+            Connectstring = Configuration["ConnectionStrings:DefaultConnection"];
         }
         public string AuthenticateName
         {
             get
             {
-                return this._AuthName;
+                return AuthenticateService.USERINFO.ToString();
             }
         }
-
-
         public bool CheckAuth(object Obj, out string RetMsg)
         {
             UserInfo userinfo = Obj as UserInfo;
+            RetMsg = string.Empty;
             if (userinfo != null)
             {
-                string provider = Configuration["ConnectionStrings:Provider"];
-                string connectstring = Configuration["ConnectionStrings:DefaultConnection"];
-               
-                RetMsg = string.Empty;
-                AuthBaseDES objDes = new AuthBaseDES();
-                string securityPssword = string.Empty;
-                if (IsNumandEG(userinfo.UserName) == true && IsNumandEG(userinfo.PassWord) == true)
+                if (Check_illegal(userinfo.UserName) == true && Check_illegal(userinfo.PassWord) == true)
                 {
-                    using (var db = new DBContext.MetaDBContext(provider, connectstring))
+                    using (var db = new DBContext.MetaDBContext(Provider, Connectstring))
                     {
-                        //securityPssword = objDes.EncryptDES(userinfo.PassWord);
-                        securityPssword = userinfo.PassWord;
-                        var user = db.auth_info.AsQueryable().Where(o => o.username == userinfo.UserName && o.password == securityPssword).FirstOrDefault();
+                        var user = db.auth_info.AsQueryable().Where(o => o.username == userinfo.UserName && o.password == DESPassword(userinfo.PassWord)).FirstOrDefault();
                         if (user != null)
                         {
                             return true;
                         }
                         else
                         {
-                            RetMsg = "UserName and Password Not Match.";
+                            RetMsg = "Username and Password Check Mismatch.";
                             return false;
                         }
                     }
                 }
                 else
                 {
-                    RetMsg = "UserName and Password obtain illegal characters.";
+                    RetMsg = "Username or Password obtain illegal characters.";
                     return false;
                 }
             }
             else
             {
-                RetMsg = "User Info Error.";
+                RetMsg = "User Information  Error.";
                 return false;
             }
         }
 
-        private bool IsNumandEG(string word)
+        private bool Check_illegal(string word)
         {
             Regex NumandEG = new Regex("[^A-Za-z0-9_.]");
             return !NumandEG.IsMatch(word);
+        }
+
+        private string SHA1Password( string password)
+        {
+            string encrypepassword = string.Empty;
+            try
+            {
+                using var hash = SHA1.Create();
+                var byteArray = hash.ComputeHash(Encoding.UTF8.GetBytes(password));
+                encrypepassword = Convert.ToHexString(byteArray).ToLower();
+            }
+            catch
+            {
+                encrypepassword = string.Empty;
+            }
+            return encrypepassword;
+        }
+
+        private string DESPassword(string password)
+        {
+            string encrypepassword = string.Empty;
+            try
+            {
+                AuthBaseDES objDes = new AuthBaseDES();
+                encrypepassword = objDes.EncryptDES(password);
+            }
+            catch
+            {
+                encrypepassword = string.Empty;
+            }
+            return encrypepassword;
         }
     }
 }
