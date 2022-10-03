@@ -15,7 +15,6 @@ namespace AuthenticationAPI
         }
         public HttpTrx HandlepHttpTrx(HttpTrx Msg);
     }
-
     public interface IAuthenticate
     {
         string AuthenticateName
@@ -25,41 +24,29 @@ namespace AuthenticationAPI
         bool CheckAuth(object Obj, out string RetMsg);
     }
 
-
-
     interface IManagement
     {
         string ManageName
         {
             get;
         }
-
-    
     }
   
-
-
     public interface ILDAPManagement
     {
         string ManageName
         {
             get;
         }
-
-        bool Init();
-        bool ModifyUserPassword(string username, string password);
-
+        public bool Init();
+        public bool ModifyUserPassword(string username, string password, out string returnMsg);
     }
 
     public interface IQueueManager
     {
-
         void PutMessage(Kernel.MessageTrx msg);
-
         Kernel.MessageTrx GetMessage();
-
         int GetCount();
-
         void ClearQueue();
     }
 

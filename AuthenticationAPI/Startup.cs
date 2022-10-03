@@ -46,14 +46,11 @@ namespace AuthenticationAPI
             services.AddSingleton<IHttpTrxService, Service.AACONREQService>();
             services.AddSingleton<IHttpTrxService, Service.AAUTHREQService>();
             services.AddSingleton<IHttpTrxService, Service.AAPSWREQService>();
-            //services.AddSingleton<ILDAPManagement, Manager.LDAPManager>();
+            //services.AddSingleton< ILDAPManagement,LDAPManager.OpenVPNLDAPManager>();
 
             services.AddSingleton<IHttpTrxService, Service.CRCRLREQServiceLite>();
             services.AddSingleton<IHttpTrxService, Service.CRUIDRPTServiceLite>();
 
-
-
-            //services.AddHostedService<LDAPManager>();
             if (Configuration.GetConnectionString("Provider") =="MY_SQL")
             {
                 services.AddDbContext<DBContext.MetaDBContext>(options => options.UseMySQL(Configuration.GetConnectionString("DefaultConnection")));
@@ -133,8 +130,8 @@ namespace AuthenticationAPI
 
 
             // for LDAP First Initial Run
-            //var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
-            //bool InitialResult  = LDAPManager.Init();
+            // var LDAPManager = app.ApplicationServices.GetService<ILDAPManagement>();
+            // bool InitialResult  = LDAPManager.Init();
 
             app.UseRouting();
             app.UseAuthentication();

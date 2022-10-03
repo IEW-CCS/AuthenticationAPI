@@ -5,64 +5,55 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace AuthenticationAPI.Service
 {
     public class ARREGCMPService : IHttpTrxService
     {
-        private string _SeviceName = TransService.ARREGCMP.ToString();
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
-        private ObjectManager ObjectManagerInstance = null;
 
-        public ARREGCMPService(ILogger<ARREGCMPService> logger, IConfiguration configuration, ISecurityManager securitymanager, IObjectManager objectmanager)
+        public ARREGCMPService(ILogger<ARREGCMPService> logger, IConfiguration configuration, ISecurityManager securitymanager)
         {
             //MetaDBContext dbcontext
             Logger = logger;
             Configuration = configuration;
             SecurityManager = securitymanager;
-            ObjectManagerInstance = (ObjectManager)objectmanager.GetInstance;
         }
 
         public string ServiceName
         {
             get
             {
-                return this._SeviceName;
+                return TransService.ARREGCMP.ToString();
             }
         }
 
         public HttpTrx HandlepHttpTrx(HttpTrx Msg)
         {
             HttpTrx HttpReply = null;
+            string replyProcessStep = ProcessStep.ARREGFIN.ToString();
+            string userName = Msg.username;
+            string deviceType = Msg.devicetype;
 
-            string _replyProcessStep = ProcessStep.ARREGFIN.ToString();
-            string _userName = Msg.username;
-            string _deviceType = Msg.devicetype;
-
-            if (_userName == string.Empty)
+            if (userName == string.Empty)
             {
                 int RTCode = (int)HttpAuthErrorCode.UserNotExist;
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                 return HttpReply;
             }
             else
             {
-                string DecryptECS = string.Empty;
-                string ReturnMsg = string.Empty;
-                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
+                int ReturnCode = SecurityManager.GetRSASecurity(userName, deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out string DecryptECS, out string ReturnMsg);
                 if (ReturnCode != 0)
                 {
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, ReturnCode, ReturnMsg);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, ReturnCode, ReturnMsg);
                     return HttpReply;
                 }
                 else
@@ -70,16 +61,16 @@ namespace AuthenticationAPI.Service
                     if (!DeserializeObj.TryParseJson(DecryptECS, out ECS HESC))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
-                        HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                        HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
                     {
-                        string DecrypContent = this.DecryptDESData(HESC.Key, HESC.IV, Msg.datacontent);
+                        string DecrypContent = DecryptDESData(HESC.Key, HESC.IV, Msg.datacontent);
                         if (DecrypContent == string.Empty)
                         {
                             int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                            HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                             return HttpReply;
                         }
                         else
@@ -87,20 +78,20 @@ namespace AuthenticationAPI.Service
                             if (!DeserializeObj.TryParseJson(DecrypContent, out ARREGCMP arregcmp))
                             {
                                 int RTCode = (int)HttpAuthErrorCode.DeserializeError;
-                                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                                 return HttpReply;
                             }
                             else
                             {
-                                if (Handle_APREGCMP(_userName, _deviceType, arregcmp) == false)
+                                if (Handle_APREGCMP(userName, deviceType, arregcmp) == false)
                                 {
                                     int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                                     return HttpReply;
                                 }
                                 else
                                 {
-                                    HttpReply = ReplyAPREGFIN(_userName, _deviceType, arregcmp);
+                                    HttpReply = ReplyARREGFIN(userName, deviceType, arregcmp);
                                     return HttpReply;
                                 }
                             }
@@ -110,19 +101,24 @@ namespace AuthenticationAPI.Service
             }
         }
 
-        private HttpTrx ReplyAPREGFIN(string username, string devicetype, ARREGCMP apregcmp)
+        private bool Handle_APREGCMP(string username, string devicetype, ARREGCMP arregcmp)
+        {
+            //---暫時根據 ARREGCMP的結果回覆
+            bool result = arregcmp.Result == "OK" ? true : false;
+            return result;
+        }
+
+        private HttpTrx ReplyARREGFIN(string username, string devicetype, ARREGCMP arregcmp)
         {
             HttpTrx HttpReply = new HttpTrx();
+            ARREGFIN APRegFinish = null;
             string replyProcessStep = ProcessStep.ARREGFIN.ToString();
             try
             {
-                ARREGFIN APRegFinish = new ARREGFIN();
-                APRegFinish.AuthenticationToken = GenerateVerifyJWTToken(username);
+                APRegFinish = new ARREGFIN();
+                APRegFinish.AuthenticationToken = GenerateAuthenticationJWTToken(username);
                 APRegFinish.AuthenticationURL = Configuration["Server:HttpAuthServiceURL"];
-
-
-                Logger.LogInformation("URL = " + APRegFinish.AuthenticationURL);
-                Logger.LogInformation("Token = " + APRegFinish.AuthenticationToken);
+                Logger.LogInformation("Reply ARREGFIN Result, User = {0}, DeviceType = {1}, AuthURL ={2}, AuthToken = {3}.", username, devicetype, APRegFinish.AuthenticationURL, APRegFinish.AuthenticationToken);
 
                 string ARRegFinishJsonStr = JsonSerializer.Serialize(APRegFinish);
 
@@ -134,10 +130,8 @@ namespace AuthenticationAPI.Service
                 HESC.Key = DES.GetKey();
                 HESC.IV = DES.GetIV();
 
-                string ECSEncryptRetMsg = string.Empty;
                 string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string SignStr = string.Empty;
-                string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, devicetype, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
+                string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, devicetype, HESCJsonStr, out string SignStr, out string ECSEncryptRetMsg);
 
                 if (ECSEncryptStr == string.Empty)
                 {
@@ -146,7 +140,6 @@ namespace AuthenticationAPI.Service
                     HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
                     return HttpReply;
                 }
-
                 else
                 {
                     HttpReply = new HttpTrx();
@@ -157,7 +150,7 @@ namespace AuthenticationAPI.Service
                     HttpReply.datacontent = DataContentDES;
                     HttpReply.ecs = ECSEncryptStr;
                     HttpReply.ecssign = SignStr;
-
+                    return HttpReply;
                 }
             }
             catch (Exception ex)
@@ -181,17 +174,7 @@ namespace AuthenticationAPI.Service
             }
             return DES_DecryptStr;
         }
-
-        private bool Handle_APREGCMP(string username, string devicetype, ARREGCMP apregcmp)
-        {
-            //---暫時 Always Return True 以後有想到邏輯再補上
-
-            bool result = apregcmp.Result == "OK" ? true : false;
-            return result;
-        }
-
-
-        private string GenerateVerifyJWTToken(string UserName)
+        private string GenerateAuthenticationJWTToken(string UserName)
         {
             var claims = new List<Claim>
             {
@@ -211,6 +194,5 @@ namespace AuthenticationAPI.Service
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);
             return token.ToString();
         }
-
     }
 }

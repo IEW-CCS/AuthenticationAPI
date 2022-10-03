@@ -11,7 +11,6 @@ namespace AuthenticationAPI.Security
     {
         private string _clientID = string.Empty;
         private string _clientPublicKey = string.Empty;
-      
         //-----------------------------------------------
         private AuthRSA _objAuthRSA = null;
         private AuthBaseDES _objAuthBaseDES = null;
@@ -22,7 +21,6 @@ namespace AuthenticationAPI.Security
             _objAuthBaseDES = new AuthBaseDES();
             _clientID = string.Empty;
             _clientPublicKey = string.Empty;
-
         }
 
         public AuthSecurity(string _privateKey)
@@ -42,7 +40,6 @@ namespace AuthenticationAPI.Security
             _objAuthRSA = new AuthRSA(PrivateKey, PublicKey);
             _clientID = string.Empty;
             _clientPublicKey = string.Empty;
-          
         }
         //-----------------------------------------------
         public string PrivateKey
@@ -66,8 +63,6 @@ namespace AuthenticationAPI.Security
             get { return _clientPublicKey; }
             set { _clientPublicKey = value; }
         }
-
-    
         public int EncryptByClientPublicKey(string rawContent, out string encryptString, out string returnMsg)
         {
             returnMsg = string.Empty;
@@ -132,8 +127,6 @@ namespace AuthenticationAPI.Security
             }
             return returnCode;
         }
-
-
         public int SignString(string rawContent, out string signString, out string returnMsg)
         {
             signString = string.Empty;
@@ -168,7 +161,6 @@ namespace AuthenticationAPI.Security
             }
             return returnCode;
         }
-
         public int CheckSignString(string DataString, string signString, out string returnMsg)
         {
             byte[] DataText = Encoding.Unicode.GetBytes(DataString);

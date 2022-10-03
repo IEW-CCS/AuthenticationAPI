@@ -83,7 +83,7 @@ namespace AuthenticationAPI.Service
                         string returnMsg = string.Empty;
                         if (CheckAuthUserInfo(username, apregreq, out returnMsg) == false)
                         {
-                            int RTCode = (int)HttpAuthErrorCode.CheckAuthFailed;
+                            int RTCode = (int)HttpAuthErrorCode.CheckAuthInfoFail;
                             HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode, returnMsg);
                             return HttpReply;
                         }

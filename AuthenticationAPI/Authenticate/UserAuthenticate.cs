@@ -72,7 +72,7 @@ namespace AuthenticationAPI.Authenticate
             }
             else
             {
-                RetMsg = "User Information  Error.";
+                RetMsg = "User Information Format Error.";
                 return false;
             }
         }

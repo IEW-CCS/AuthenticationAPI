@@ -12,33 +12,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.DirectoryServices;
 using System.Text.Json;
+using AuthenticationAPI.LDAPManager;
 
-namespace AuthenticationAPI.Manager
+namespace AuthenticationAPI.LDAPManager
 {
-    public class LDAPManager : ILDAPManagement
+    public class OpenVPNLDAPManager : ILDAPManagement
     {
-
         private readonly ILogger<LoginController> Logger;
         private readonly IConfiguration Configuration;
-        private string _ManagerName = "LDAPManager";
         private DirectoryEntry BaseEntry = null;
-
-
         public string ManageName
         {
             get
             {
-                return this._ManagerName;
+                return LDAP.OPENVPN.ToString();
             }
         }
-
-        public LDAPManager(ILogger<LoginController> logger, IConfiguration configuration)
+        public OpenVPNLDAPManager(ILogger<LoginController> logger, IConfiguration configuration)
         {
             Logger = logger;       
             Configuration = configuration;
         }
-
-
         public bool Init()
         {
             bool InitialResult = false;
@@ -56,7 +50,7 @@ namespace AuthenticationAPI.Manager
             }
             catch(Exception ex)
             {
-                Logger.LogError("LDAP Init Error, Msg = " + ex.Message);
+                Logger.LogError("LDAP Entry Init Error, Msg = " + ex.Message);
                 InitialResult = false;
             }
             return InitialResult;
@@ -67,24 +61,23 @@ namespace AuthenticationAPI.Manager
             return new DirectoryEntry(path, username, password, AuthenticationTypes.Signing);
         }
 
-        public bool ModifyUserPassword(string username, string password)
+        public bool ModifyUserPassword(string username, string password, out string returnMsg)
         {
             bool result = false;
-
+            returnMsg = string.Empty;
             try
             {
-                //DirectoryEntry de = GetDirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord);
                 using (DirectorySearcher deSearch = new DirectorySearcher(BaseEntry)) //Search query instance
-                {
-                    // deSearch.Filter = "(&(objectClass=organizationalPerson)(cn=" + cnPath + "))"; //Filter by pager (Student number)
+                { 
                     deSearch.Filter = string.Format("(&(uid={0}))", username); 
                     deSearch.SearchScope = SearchScope.Subtree;
                     SearchResult searchresult = deSearch.FindOne();
-
                     if (searchresult == null)
                     {
                         result = false;
-                        Logger.LogError(string.Format("UserName = {0}, Not Register in LDAP Server.", username));
+                        string errmsg = string.Format("UserName = {0}, Not Register in LDAP Server.", username);
+                        returnMsg = errmsg;
+                        Logger.LogError(errmsg);
                     }
                     else
                     {
@@ -94,15 +87,8 @@ namespace AuthenticationAPI.Manager
                             uEntry.CommitChanges();
                             uEntry.Close();
                             result = true;
-                            /*
-                            foreach (string property in uEntry.Properties.PropertyNames)
-                            {
-                                string value = uEntry.Properties[property][0].ToString();
-                                Logger.LogInformation(property + ":" + value);
-                            }*/
-
-                            //uEntry.InvokeSet("mail", "James01@gmail.com");
-
+                            returnMsg = string.Empty;
+                            Logger.LogInformation(string.Format("Change LDAP Password Success, username = {0}, password = {1}.", username, password));
                         }
                     }
                 }
@@ -110,16 +96,64 @@ namespace AuthenticationAPI.Manager
             catch (Exception ex )
             {
                 result = false;
-                Logger.LogError(string.Format("Modify User Password Error, UserName = {0}, Password = {1}, Exception Message = {2}.",username,password,ex.Message));
+                string errmsg = string.Format("Change LDAP Password Error, UserName = {0}, Password = {1}, Exception Message = {2}.", username, password, ex.Message);
+                returnMsg = errmsg;
+                Logger.LogError(errmsg);
             }
-
             return result;
         }
 
-     
-
-
         /*
+         * 
+         *  bool ModifyUserPassword(string username, string password, out string returnMsg)
+            {
+            bool result = false;
+            returnMsg = string.Empty;
+            try
+            {
+                //DirectoryEntry de = GetDirectoryEntry(LDAPPath, LDAPUserName, LDAPPassWord);
+                using (DirectorySearcher deSearch = new DirectorySearcher(BaseEntry)) //Search query instance
+                {
+                    // deSearch.Filter = "(&(objectClass=organizationalPerson)(cn=" + cnPath + "))"; //Filter by pager (Student number)
+                    deSearch.Filter = string.Format("(&(uid={0}))", username); 
+                    deSearch.SearchScope = SearchScope.Subtree;
+                    SearchResult searchresult = deSearch.FindOne();
+                    if (searchresult == null)
+                    {
+                        result = false;
+                        string errmsg = string.Format("UserName = {0}, Not Register in LDAP Server.", username);
+                        returnMsg = errmsg;
+                        Logger.LogError(errmsg);
+                    }
+                    else
+                    {
+                        using (DirectoryEntry uEntry = searchresult.GetDirectoryEntry())
+                        {
+                            uEntry.InvokeSet("userPassword", password);
+                            uEntry.CommitChanges();
+                            uEntry.Close();
+                            result = true;
+
+                            foreach (string property in uEntry.Properties.PropertyNames)
+                            {
+                                string value = uEntry.Properties[property][0].ToString();
+                                Logger.LogInformation(property + ":" + value);
+                            }
+
+                       //uEntry.InvokeSet("mail", "James01@gmail.com");
+
+                        }
+                      }
+                    }
+                  }
+                 catch (Exception ex)
+             {
+               result = false;
+               Logger.LogError(string.Format("Modify User Password Error, UserName = {0}, Password = {1}, Exception Message = {2}.", username, password, ex.Message));
+           }
+         return result;
+        }
+
         private void RoutineTask()
         {
             while (_keepRunning)

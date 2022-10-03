@@ -16,14 +16,12 @@ namespace AuthenticationAPI.Security
             des.GenerateKey();
             des.GenerateIV();
         }
-
         public AuthDES( string key, string iv)
         {
             des = new DESCryptoServiceProvider();
             des.Key = StringToByteArray(key);
             des.IV = StringToByteArray(iv);
         }
-
         public string GetKey ()
         {
             return BitConverter.ToString(des.Key).Replace("-",""); 
@@ -40,7 +38,6 @@ namespace AuthenticationAPI.Security
             ICryptoTransform desencrypt = des.CreateEncryptor();
             return (BitConverter.ToString(desencrypt.TransformFinalBlock(s, 0, s.Length)).Replace("-", string.Empty));
         }
-
         public string DecryptDES(string hexString)
         {
             try
@@ -60,7 +57,6 @@ namespace AuthenticationAPI.Security
                 return hexString;
             }
         }
-
         private byte[] StringToByteArray(string hex)
         {
             return Enumerable.Range(0, hex.Length)

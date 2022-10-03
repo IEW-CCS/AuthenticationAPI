@@ -27,7 +27,7 @@ namespace AuthenticationAPI.Controllers
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private readonly IQueueManager QueueManager;
-       // private readonly ILDAPManagement LDAPManager;
+        // private readonly ILDAPManagement OpenVPN_LDAP;
         private readonly ObjectManager ObjectManagerInstance;
 
         public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
@@ -37,7 +37,7 @@ namespace AuthenticationAPI.Controllers
             Configuration = configuration;
             SecurityManager = securitymanager;
             QueueManager = queuemanager;
-           // LDAPManager = ldapmanager;
+            // OpenVPN_LDAP = openvpnldap;
             ObjectManagerInstance = (ObjectManager)objectmanager.GetInstance;
         }
 
@@ -46,13 +46,12 @@ namespace AuthenticationAPI.Controllers
         [EnableCors("CorsPolicy")]
         public HttpTrx Post([FromBody] HttpTrx Msg)
         {
-
             HttpTrx HttpReply = null;
             string UserName = Msg.username;
             string DeviceType = Msg.devicetype;
             string ProcStep = Msg.procstep;
 
-            if (CheckProcStep(ProcStep) == false)
+            if (CheckProcStep(UserName, ProcStep) == false)
             {
                 string ReplyProcessStep = ProcessStep.STEP_ERR.ToString();
                 int RTCode = (int)HttpAuthErrorCode.ProcStepNotMatch;
@@ -66,7 +65,6 @@ namespace AuthenticationAPI.Controllers
                 {
                     switch (PStep)
                     {
-
                         case ProcessStep.AACONREQ:
                             {
                                 var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransService.AACONREQ.ToString()).FirstOrDefault();
@@ -74,7 +72,7 @@ namespace AuthenticationAPI.Controllers
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                                    Logger.LogInformation(String.Format("[Authenticate] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.", Msg.username, Msg.devicetype, Msg.procstep, httpTrxMsg));
                                     HttpReply = HandleAPVRYREQ.HandlepHttpTrx(Msg);
                                     if (HttpReply.returncode == 0)
                                     {
@@ -83,14 +81,13 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.AACONPLY.ToString();
-                                    Logger.LogInformation("ERROR !! AVCONREQ Not Register.");
+                                    Logger.LogError("AACONREQ Service Not Register, so can be Handle.");
+                                    string ReplyProcessStep = ProcessStep.AACONPLY.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
                             }
-
                         case ProcessStep.AAUTHREQ:
                             {
                                 var HandleAPVRYREQ = HttpTrxServices.Where(s => s.ServiceName == TransService.AAUTHREQ.ToString()).FirstOrDefault();
@@ -98,7 +95,7 @@ namespace AuthenticationAPI.Controllers
                                 {
                                     ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                                    Logger.LogInformation(String.Format("[Authenticate] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.", Msg.username, Msg.devicetype, Msg.procstep, httpTrxMsg));
                                     HttpReply = HandleAPVRYREQ.HandlepHttpTrx(Msg);
                                     if (HttpReply.returncode == 0)
                                     {
@@ -107,50 +104,57 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.AAUTHPLY.ToString();
-                                    Logger.LogInformation("ERROR !! DUUIDRPT Not Register.");
+                                    Logger.LogError("AAUTHREQ Service Not Register, so can be Handle.");
+                                    string ReplyProcessStep = ProcessStep.AAUTHPLY.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
-                            }
-
-                     
+                            }  
                         case ProcessStep.AAPSWREQ:
                             {
                                 var HandleAPHPWREQ = HttpTrxServices.Where(s => s.ServiceName == TransService.AAPSWREQ.ToString()).FirstOrDefault();
                                 if (HandleAPHPWREQ != null)
                                 {
+                                    ObjectManagerInstance.SetVerifyStatus(UserName, ProcStep);
                                     string httpTrxMsg = JsonSerializer.Serialize(Msg);
-                                    Logger.LogInformation("Handle Http Trx = " + httpTrxMsg);
+                                    Logger.LogInformation(String.Format("[Authenticate] Service Request, User ={0}, DeviceType = {1}, ProcessStep = {2}, RawData = {3}.", Msg.username, Msg.devicetype, Msg.procstep, httpTrxMsg));
                                     HttpReply = HandleAPHPWREQ.HandlepHttpTrx(Msg);
-                                   /* if (HttpReply.returncode == 0)
+                                    if (HttpReply.returncode == 0)
                                     {
-                                        ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
-                                         string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
+                                        string hashPassword = ObjectManagerInstance.GetHashPassword(UserName);
                                         if (hashPassword != string.Empty)
                                         {
-                                            LDAPPWChange(UserName, hashPassword);
+                                            if(OpenVPNPassWordChange(UserName, hashPassword, out string ReturnMsg) == false)
+                                            {
+                                                Logger.LogError(string.Format("OpenVPN Change Password Error, Msg = {0}.", ReturnMsg));
+                                                string ReplyProcessStep = ProcessStep.AAPSWPLY.ToString();
+                                                int RTCode = (int)HttpAuthErrorCode.ChangeHashPasswordError;
+                                                HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
+                                            }
+                                            else
+                                            {
+                                                ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
+                                            }
                                         }
                                         else
                                         {
-                                            string _replyProcessStep = ProcessStep.AAPSWPLY.ToString();
-                                            Logger.LogInformation("ERROR !! Hash PassWord Generate Error.");
+                                            Logger.LogError("Hash PassWord Generate Error.");
+                                            string ReplyProcessStep = ProcessStep.AAPSWPLY.ToString();
                                             int RTCode = (int)HttpAuthErrorCode.HashPasswordCreateError;
-                                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                            HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                         }
-                                    }*/
+                                    }
                                 }
                                 else
                                 {
-                                    string _replyProcessStep = ProcessStep.AAPSWPLY.ToString();
-                                    Logger.LogInformation("ERROR !! APREGCMP Not Register.");
+                                    Logger.LogError("AAPSWREQ Service Not Register, so can be Handle.");
+                                    string ReplyProcessStep = ProcessStep.AAPSWPLY.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
-                                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                    HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
                             }
-
                         default:
                             {
                                 string ReplyProcessStep = ProcessStep.STEP_ERR.ToString();
@@ -169,8 +173,10 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
-        private bool CheckProcStep(string procStep)
+        private bool CheckProcStep(string username, string procStep)
         {
+            //---------  20220930 ------
+            //=========  在未來加入 Process Step Control ========
             bool result = false;
             try
             {
@@ -194,18 +200,20 @@ namespace AuthenticationAPI.Controllers
             return result;
         }
 
-        private bool LDAPPWChange(string UserName, string hashPassword)
+        private bool OpenVPNPassWordChange(string userName, string hashPassword,  out string resultMessage)
         {
             bool result = false;
+            resultMessage = string.Empty;
+
             try
             {
                 result = true;
-                //result = LDAPManager.ModifyUserPassword(UserName, hashPassword);
+                //result = OpenVPN_LDAP.ModifyUserPassword(UserName, hashPassword);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 result = false;
-                Logger.LogError("Generate Hash Password Error, Error Msg = " + ex.Message);
+                Logger.LogError("OpenVPN Change Password Error, Msg = " + ex.Message);
 
             }
             return result;

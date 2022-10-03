@@ -68,6 +68,7 @@ namespace AuthenticationAPI.Controllers
                     {
                         case ProcessStep.CRUIDRPT:
                             {
+                                // With 104-2 Mobile App Uset Lite Service no Encrypy
                                 var HandleDUUIDRPT = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.CRUIDRPT_Lite.ToString()).FirstOrDefault();
                                 if (HandleDUUIDRPT != null)
                                 {
@@ -89,9 +90,9 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 break;
                             }
-
                         case ProcessStep.CRCRLREQ:
                             {
+                                // With 104-2 Mobile App Uset Lite Service no Encrypy
                                 var HandleCREDREQ = HttpTrxServices.Where(s => s.ServiceName == TransServiceLite.CRCRLREQ_Lite.ToString()).FirstOrDefault();
                                 if (HandleCREDREQ != null)
                                 {
@@ -102,6 +103,8 @@ namespace AuthenticationAPI.Controllers
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
+
+                                        //---- Credential Reply OK trigger WebSocker Announce to 104-1
                                         Credential Cred = ObjectManagerInstance.GetCredential(UserName);
                                         Credential_Info  CredInfo = ObjectManagerInstance.GetCredInfo(UserName);
                                         if (Cred != null && CredInfo != null)
@@ -116,14 +119,13 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 else
                                 {
-                                    Logger.LogError("CRUIDRPT Service Not Register, so can be Handle.");
+                                    Logger.LogError("CRCRLREQ Service Not Register, so can be Handle.");
                                     string ReplyProcessStep = ProcessStep.CRCRLPLY.ToString();
                                     int RTCode = (int)HttpAuthErrorCode.ServiceNotRegister;
                                     HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                 }
                                 break;
                             }
-
                         case ProcessStep.ARREGCMP:
                             {
                                 var HandleAREGCMP = HttpTrxServices.Where(s => s.ServiceName == TransService.ARREGCMP.ToString()).FirstOrDefault();
@@ -147,7 +149,6 @@ namespace AuthenticationAPI.Controllers
                                 }
                                 break;
                             }
-
                         default:
                             {
                                 string ReplyProcessStep = ProcessStep.STEP_ERR.ToString();
@@ -165,9 +166,6 @@ namespace AuthenticationAPI.Controllers
                 return HttpReply;
             }
         }
-
-
-
         private bool CheckProcStep(string username, string procStep)
         {
             //---------  20220930 ------
@@ -200,26 +198,32 @@ namespace AuthenticationAPI.Controllers
         private void WebSocketUIDAnnounce(string username, Credential credentialcontent, Credential_Info credentialInfo)
         {
             WSTrx WebSocketReply = null;
-            string ReplyProcStep = ProcessStep.ARWSCANN.ToString();
-            string Device_type = DeviceType.CONSOLE.ToString();
+            string replyProcStep = ProcessStep.ARWSCANN.ToString();
+            string device_type = DeviceType.CONSOLE.ToString();
 
-            ARWSCANN wsuidann = new ARWSCANN();
-            wsuidann.Credential = credentialcontent.CredContent;
-            wsuidann.CredentialSign = credentialcontent.CredSign.Substring(0, 8);
-            wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
-            wsuidann.DeviceUUID = credentialInfo.DeviceUUID;
-            string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);
+            try
+            {
+                ARWSCANN wsuidann = new ARWSCANN();
+                wsuidann.Credential = credentialcontent.CredContent;
+                wsuidann.CredentialSign = credentialcontent.CredSign.Substring(0, 8);  // Base on BLE Limit Send Credential Sign 8 Char
+                wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
+                wsuidann.DeviceUUID = credentialInfo.DeviceUUID;
+                string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);
 
-            WebSocketReply = new WSTrx();
-            WebSocketReply.DataContent = Datacontent;
-            WebSocketReply.ProcStep = ReplyProcStep;
-            WebSocketReply.ReturnCode = 0;
-            WebSocketReply.ReturnMsg = string.Empty;
-            WebSocketReply.ECS = string.Empty;
-            WebSocketReply.ECSSign = string.Empty; ;
-            string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
-            SendWebsocket(username, string.Empty, WSReplyJsonStr);
-
+                WebSocketReply = new WSTrx();
+                WebSocketReply.DataContent = Datacontent;
+                WebSocketReply.ProcStep = replyProcStep;
+                WebSocketReply.ReturnCode = 0;
+                WebSocketReply.ReturnMsg = string.Empty;
+                WebSocketReply.ECS = string.Empty;
+                WebSocketReply.ECSSign = string.Empty; ;
+                string WSReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(WebSocketReply);
+                SendWebsocket(username, string.Empty, WSReplyJsonStr);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("WebSocket Announce UID Error, Err Msg = " + ex.Message);
+            }
 
             /*  20220915 封存 With 加密程序
              * try
@@ -241,13 +245,13 @@ namespace AuthenticationAPI.Controllers
                    string ECSEncryptRetMsg = string.Empty;
                    string HESCJsonStr = JsonSerializer.Serialize(HESC);
                    string SignStr = string.Empty;
-                   string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, Device_type, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
+                   string ECSEncryptStr = SecurityManager.Encrypt_Sign(username, device_type, HESCJsonStr, out SignStr, out ECSEncryptRetMsg);
 
                    if (ECSEncryptStr != string.Empty && SignStr != string.Empty)
                    {
                        WebSocketReply = new WSTrx();
                        WebSocketReply.DataContent = DataContentDES;
-                       WebSocketReply.ProcStep = ReplyProcStep;
+                       WebSocketReply.ProcStep = replyProcStep;
                        WebSocketReply.ReturnCode = 0;
                        WebSocketReply.ReturnMsg = string.Empty;
                        WebSocketReply.ECS = ECSEncryptStr;
@@ -275,10 +279,9 @@ namespace AuthenticationAPI.Controllers
             }
             catch (Exception Ex)
             {
-                Logger.LogError("Send Data via WebSocket Error, Err Msg = " + Ex.Message);
+                Logger.LogError("Send Data via WebSocket Tunnel Error, Err Msg = " + Ex.Message);
             }
         }
-
 
         // GET: api/<AuthenticateController>
         /*

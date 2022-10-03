@@ -4,17 +4,13 @@ using AuthenticationAPI.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
+
 
 namespace AuthenticationAPI.Service
 {
     public class CRCRLREQService : IHttpTrxService
     {
-        private string _SeviceName = TransService.CRCRLREQ.ToString();
         private readonly ILogger Logger;
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
@@ -32,31 +28,29 @@ namespace AuthenticationAPI.Service
         {
             get
             {
-                return this._SeviceName;
+                return TransService.CRCRLREQ.ToString();
             }
         }
 
         public HttpTrx HandlepHttpTrx(HttpTrx Msg)
         {
             HttpTrx HttpReply = null;
-            string _replyProcessStep = ProcessStep.CRCRLPLY.ToString();
-            string _userName = Msg.username;
-            string _deviceType = Msg.devicetype;
+            string replyProcessStep = ProcessStep.CRCRLPLY.ToString();
+            string userName = Msg.username;
+            string deviceType = Msg.devicetype;
 
-            if (_userName == string.Empty)
+            if (userName == string.Empty)
             {
                 int RTCode = (int)HttpAuthErrorCode.UserNotExist;
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                 return HttpReply;
             }
             else
             {
-                string DecryptECS = string.Empty;
-                string ReturnMsg = string.Empty;
-                int ReturnCode = SecurityManager.GetRSASecurity(_userName, _deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out DecryptECS, out ReturnMsg);
+                int ReturnCode = SecurityManager.GetRSASecurity(userName, deviceType).Decrypt_Check(Msg.ecs, Msg.ecssign, out string DecryptECS, out string ReturnMsg);
                 if (ReturnCode != 0)
                 {
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, ReturnCode, ReturnMsg);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, ReturnCode, ReturnMsg);
                     return HttpReply;
                 }
                 else
@@ -64,7 +58,7 @@ namespace AuthenticationAPI.Service
                     if (!DeserializeObj.TryParseJson(DecryptECS, out ECS HESC))
                     {
                         int RTCode = (int)HttpAuthErrorCode.DecryptECSError;
-                        HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                        HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                         return HttpReply;
                     }
                     else
@@ -72,49 +66,53 @@ namespace AuthenticationAPI.Service
                         if (HESC.Algo != "DES")
                         {
                             int RTCode = (int)HttpAuthErrorCode.DecryptError;
-                            HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                            HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                             return HttpReply;
                         }
                         else
                         {
-                            if (Handle_CCREDREQ(_userName, _deviceType) == false)
+                            //--- Get Credential No Content So check Format 正確即可 ----
+                            if (Handle_CCREDREQ(userName, deviceType) == false)
                             {
                                 int RTCode = (int)HttpAuthErrorCode.ServiceProgressError;
-                                HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                                HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                                 return HttpReply;
                             }
                             else
                             {
-                                GenerateCredential(_userName);
-                                HttpReply = this.ReplyCCREQPLY(_userName, _deviceType);
+                                HttpReply = ReplyCRCRLPLY(userName, deviceType);
                                 return HttpReply;
                             }
-
                         }
                     }
                 }
-
             }
         }
 
+        private bool Handle_CCREDREQ(string username, string devicetype)
+        {
+            //----  暫時只考慮是否正確產生 Credential 以後有想到什麼邏輯再補上
+            return GenerateCredential(username);
+        }
 
-        private HttpTrx ReplyCCREQPLY(string username, string devicetype)
+        private HttpTrx ReplyCRCRLPLY(string username, string devicetype)
         {
             HttpTrx HttpReply = new HttpTrx();
-            CRCRLPLY CCredReply = new CRCRLPLY();
-            string _replyProcessStep = ProcessStep.CRCRLPLY.ToString();
-
+            CRCRLPLY CCredReply = null;
+            string replyProcessStep = ProcessStep.CRCRLPLY.ToString();
             try
             {
                 Credential card = this.ObjectManagerInstance.GetCredential(username);
                 if (card == null)
                 {
                     int RTCode = (int)HttpAuthErrorCode.CreateCredentialError;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                     return HttpReply;
                 }
 
-                CCredReply.CredentialSign = card.CredSign;
+                CCredReply = new CRCRLPLY();
+                CCredReply.CredentialSign = card.CredSign.Substring(0,8);   // Base on BLE Limit Send Credential Sign 8 Char
+                
                 string CCredReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(CCredReply);
                 AuthDES DES = new AuthDES();
                 string DataContentDES = DES.EncryptDES(CCredReplyJsonStr);
@@ -124,14 +122,13 @@ namespace AuthenticationAPI.Service
                 HESC.Key = DES.GetKey();
                 HESC.IV = DES.GetIV();
 
-                string ECSEncryptRetMsg = string.Empty;
                 string HESCJsonStr = JsonSerializer.Serialize(HESC);
-                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out ECSEncryptRetMsg);
+                string ECSEncryptStr = SecurityManager.EncryptByClientPublicKey(username, devicetype, HESCJsonStr, out string ECSEncryptRetMsg);
 
                 if (ECSEncryptStr == string.Empty)
                 {
                     int RTCode = (int)HttpAuthErrorCode.ECSbyPublicKeyErrorRSA;
-                    HttpReply = HttpReplyNG.Trx(_replyProcessStep, RTCode);
+                    HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
                     HttpReply.returnmsg += ", Error Msg = " + ECSEncryptRetMsg;
                     return HttpReply;
                 }
@@ -139,7 +136,7 @@ namespace AuthenticationAPI.Service
                 {
                     HttpReply = new HttpTrx();
                     HttpReply.username = username;
-                    HttpReply.procstep = _replyProcessStep;
+                    HttpReply.procstep = replyProcessStep;
                     HttpReply.returncode = 0;
                     HttpReply.returnmsg = string.Empty;
                     HttpReply.datacontent = DataContentDES;
@@ -150,9 +147,39 @@ namespace AuthenticationAPI.Service
             }
             catch (Exception ex)
             {
-                HttpReply = HttpReplyNG.Trx(_replyProcessStep, ex);
+                HttpReply = HttpReplyNG.Trx(replyProcessStep, ex);
                 return HttpReply;
             }
+        }
+
+        private bool GenerateCredential(string username)
+        {
+            bool result = false;
+            try
+            {
+                Credential_Info credObj = ObjectManagerInstance.GetCredInfo(username);
+                credObj.Nonce = 0;
+                string credJsonStr = JsonSerializer.Serialize(credObj);
+                if (SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out string signOut, out string returnMsgOut) == 0)
+                {
+                    Credential Cred = new Credential();
+                    Cred.CredContent = credJsonStr;
+                    Cred.CredSign = signOut;
+                    this.ObjectManagerInstance.SetCredential(username, Cred);
+                    result = true;
+                }
+                else
+                {
+                    Logger.LogError(string.Format("GenerateCredential Error, Sign Credential Info Error, UserName = ", username));
+                    result = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(string.Format("GenerateCredential Exception Error, UserName = {0}, Msg = {1}", ex.Message, username));
+                result = false;
+            }
+            return result;
         }
 
         private string DecryptBaseDESData(string DataContent)
@@ -183,30 +210,6 @@ namespace AuthenticationAPI.Service
                 DES_DecryptStr = string.Empty;
             }
             return DES_DecryptStr;
-        }
-
-
-        private bool Handle_CCREDREQ(string username, string devicetype)
-        {
-            //---暫時 Always Return True 以後有想到邏輯再補上
-            return true;
-        }
-
-        private void GenerateCredential(string username)
-        {
-            Credential_Info credObj = ObjectManagerInstance.GetCredInfo(username);
-            credObj.Nonce = 0;
-            string credJsonStr = JsonSerializer.Serialize(credObj);
-            string signOut = string.Empty;
-            string Credential = string.Empty;
-            if (SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out signOut, out string returnMsgOut) == 0)
-            {
-                Credential Cred = new Credential();
-                Cred.CredContent = credJsonStr;
-                Cred.CredSign = signOut;
-                this.ObjectManagerInstance.SetCredential(username, Cred);
-            }
-          
         }
     }
 }

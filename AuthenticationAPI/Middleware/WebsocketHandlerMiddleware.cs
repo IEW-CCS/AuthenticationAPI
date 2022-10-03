@@ -25,23 +25,18 @@ namespace AuthenticationAPI.Middleware
         private int _TaskSleepPeriodMs = 100;
         private Thread _route = null;
         private bool _keepRunning = true;
-
         public WebsocketHandlerMiddleware(RequestDelegate _next,ILoggerFactory loggerFactory, IMessageManager messagemanage, IQueueManager queuemanager, IConfiguration configuration )
         {
             this.next = _next;
-
             QueueManager = queuemanager;
             MessageManager = messagemanage;
             Configuration = configuration;
             Logger = loggerFactory.CreateLogger<WebsocketHandlerMiddleware>();
-
             _route = new Thread(new ThreadStart(scanSendQueueTask));
             _route.IsBackground = true;
             _route.Start();
             
         }
-
-
         private void scanSendQueueTask()
         {
             int count = 0;
@@ -66,7 +61,6 @@ namespace AuthenticationAPI.Middleware
                 catch { }
             }
         }
-
         private void DoSendProc()
         {
             // 送出 WebSocket to Client
@@ -100,7 +94,6 @@ namespace AuthenticationAPI.Middleware
                 }
             }
         }
-
         public async Task Invoke(HttpContext context)
         {
             // 透過Web 收HTTP  / WS transaction 進來.
@@ -139,7 +132,7 @@ namespace AuthenticationAPI.Middleware
 
                         if (ClientID != String.Empty)
                         {
-                            WSTrx Ws = this.WSTrxReplyOK();
+                            WSTrx Ws = this.WSTrxConnectReplyOK();
                             string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
                             await wsClient.SendMessageAsync(WsJsonStr);  
                             await Handle(wsClient);
@@ -147,7 +140,7 @@ namespace AuthenticationAPI.Middleware
                         else
                         {
                             int RTCode = (int)WSAuthErrorCode.TokenInfoError;
-                            WSTrx Ws = this.WSTrxReplyNG(RTCode);
+                            WSTrx Ws = this.WSTrxConnectReplyNG(RTCode);
                             string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
                             await wsClient.SendMessageAsync(WsJsonStr);  
                             wsClient.WebSocket.Abort();
@@ -158,7 +151,7 @@ namespace AuthenticationAPI.Middleware
                     catch (Exception ex)
                     {
                         int RTCode = (int)WSAuthErrorCode.ConnectError;
-                        WSTrx Ws = this.WSTrxReplyNG(RTCode);
+                        WSTrx Ws = this.WSTrxConnectReplyNG(RTCode);
                         Ws.ReturnMsg += ", ErrMsg = " + ex.Message;
                         string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
                         await wsClient.SendMessageAsync(WsJsonStr);
@@ -170,7 +163,7 @@ namespace AuthenticationAPI.Middleware
                 else
                 {
                     int RTCode = (int)WSAuthErrorCode.AuthorizedError;
-                    WSTrx Ws = this.WSTrxReplyNG(RTCode);
+                    WSTrx Ws = this.WSTrxConnectReplyNG(RTCode);
                     string WsJsonStr = System.Text.Json.JsonSerializer.Serialize(Ws);
                     await wsClient.SendMessageAsync(WsJsonStr);
                     wsClient.WebSocket.Abort();
@@ -188,7 +181,6 @@ namespace AuthenticationAPI.Middleware
         {
             WebsocketClientCollection.Add(webSocket);
             Logger.LogInformation($"Websocket client added Client ID = " + webSocket.Id);
-
             WebSocketReceiveResult result = null;
             do
             {
@@ -200,7 +192,6 @@ namespace AuthenticationAPI.Middleware
                     {
                         var msgString = Encoding.UTF8.GetString(buffer);
                         Logger.LogInformation($"Websocket client ReceiveAsync message {msgString}.");
-
                         //------以後這邊考慮組判斷上來的資訊直接對應到反序列化結果------
                         try
                         {
@@ -235,8 +226,6 @@ namespace AuthenticationAPI.Middleware
             WebsocketClientCollection.Remove(webSocket);
             Logger.LogInformation($"Websocket client closed.");
         }
-
-     
         public void Dispose()
         {
             _keepRunning = false;
@@ -257,7 +246,6 @@ namespace AuthenticationAPI.Middleware
                 string jwt = authSchemeAndJwt[1];
                 return jwt;
             }
-            
         }
         protected async Task<bool> AuthorizeUserFromHttpContextAsync(HttpContext context)
         {
@@ -281,8 +269,7 @@ namespace AuthenticationAPI.Middleware
             var jwtBacker = new JwtBearerBacker(jwtBearerOptions);
             return jwtBacker.JetUserName(jwtHeader);
         }
-
-        private WSTrx WSTrxReplyNG(int retuenCode)
+        private WSTrx WSTrxConnectReplyNG(int retuenCode)
         {
             WSTrx WSReply = new WSTrx();
             WSReply.ProcStep = ProcessStep.ARWSCPLY.ToString();
@@ -291,8 +278,7 @@ namespace AuthenticationAPI.Middleware
             WSReply.DataContent = string.Empty;
             return WSReply;
         }
-
-        private WSTrx WSTrxReplyOK()
+        private WSTrx WSTrxConnectReplyOK()
         {
             WSTrx WSReply = new WSTrx();
             WSReply.ProcStep = ProcessStep.ARWSCPLY.ToString();
@@ -301,6 +287,5 @@ namespace AuthenticationAPI.Middleware
             WSReply.DataContent = string.Empty;
             return WSReply;
         }
-
     }
 }

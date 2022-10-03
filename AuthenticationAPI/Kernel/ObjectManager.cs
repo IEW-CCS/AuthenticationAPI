@@ -1,5 +1,6 @@
 ﻿using AuthenticationAPI.DBContext;
 using AuthenticationAPI.DtoS;
+using AuthenticationAPI.Structure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -22,6 +23,8 @@ namespace AuthenticationAPI.Kernel
 
         //---- 暫時存放 ------
         private  ConcurrentDictionary<string, Credential> _credential = null;
+        private  ConcurrentDictionary<string, PassCode_Info> _passcode = null;
+        private  ConcurrentDictionary<string, SerialNo_Info> _serialno = null;
         private  ConcurrentDictionary<string, string> _registerStatus = null;
         private  ConcurrentDictionary<string, string> _verifyStatus = null;
         private  ConcurrentDictionary<string, string> _hashPassword = null;
@@ -65,6 +68,8 @@ namespace AuthenticationAPI.Kernel
             _registerStatus = new ConcurrentDictionary<string, string>();
             _hashPassword = new ConcurrentDictionary<string, string>();
             _verifyStatus = new ConcurrentDictionary<string, string>();
+            _passcode = new ConcurrentDictionary<string, PassCode_Info>();
+            _serialno = new ConcurrentDictionary<string, SerialNo_Info>();
 
         }
 
@@ -165,8 +170,41 @@ namespace AuthenticationAPI.Kernel
         {
             this._credential.AddOrUpdate(Key, cred, (key, oldvalue) => cred);
         }
-        
-       
+
+        public PassCode_Info GetPassCode(string Key)
+        {
+            PassCode_Info passcode = null;
+            if (this._passcode.TryGetValue(Key, out passcode))
+            {
+                return passcode;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        public void SetPassCode(string Key, PassCode_Info passcode)
+        {
+            this._passcode.AddOrUpdate(Key, passcode, (key, oldvalue) => passcode);
+        }
+
+        public SerialNo_Info GetSerialNo(string Key)
+        {
+            SerialNo_Info serialNo = null;
+            if (this._serialno.TryGetValue(Key, out serialNo))
+            {
+                return serialNo;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        public void SetSerialNo(string Key, SerialNo_Info serialNo)
+        {
+            this._serialno.AddOrUpdate(Key, serialNo, (key, oldvalue) => serialNo);
+        }
+
         public string GetVerifyStatus(string Key)
         {
             return this._verifyStatus.GetOrAdd(Key, key =>

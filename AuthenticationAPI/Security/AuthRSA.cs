@@ -16,13 +16,11 @@ namespace AuthenticationAPI.Security
             this.publicKey = rsa.ToXmlString(false);
             this.privateKey = rsa.ToXmlString(true);
         }
-
         public AuthRSA(string _privateKey)
         {
             this.publicKey = string.Empty;
             this.privateKey = _privateKey;
         }
-
         public AuthRSA(string _privateKey, string _publicKey)
         {
             this.publicKey = _publicKey;

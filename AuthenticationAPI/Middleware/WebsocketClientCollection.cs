@@ -8,7 +8,6 @@ namespace AuthenticationAPI.Middleware
     public class WebsocketClientCollection
     {
         private static List<WebsocketClient> _clients = new List<WebsocketClient>();
-
         public static void Add(WebsocketClient client)
         {
             _clients.Add(client);
