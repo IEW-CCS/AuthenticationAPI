@@ -7,11 +7,11 @@ namespace AuthenticationAPI.DtoS
 {
     public class AAUTHPLY
     {
-        public string SerialNo { get; set; }
+        public string SerialNumber { get; set; }
      
         public AAUTHPLY()
         {
-            SerialNo = string.Empty;
+            SerialNumber = string.Empty;
         }
     }
 }
