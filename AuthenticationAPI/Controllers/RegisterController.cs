@@ -80,6 +80,11 @@ namespace AuthenticationAPI.Controllers
                                     {
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
                                     }
+                                    else
+                                    {
+                                        return HttpReply;
+                                    }
+
                                 }
                                 else
                                 {
@@ -105,16 +110,20 @@ namespace AuthenticationAPI.Controllers
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
 
                                         //---- Credential Reply OK trigger WebSocker Announce to 104-1
-                                        Credential Cred = ObjectManagerInstance.GetCredential(UserName);
                                         Credential_Info  CredInfo = ObjectManagerInstance.GetCredInfo(UserName);
-                                        if (Cred != null && CredInfo != null)
+                                        string CredSign = ObjectManagerInstance.GetCredentialSign(UserName);
+                                        if (CredSign != null && CredInfo != null)
                                         {
-                                            WebSocketUIDAnnounce(UserName, Cred, CredInfo);
+                                            WebSocketUIDAnnounce(UserName, CredSign, CredInfo);
                                         }
                                         else
                                         {
                                             Logger.LogError(string.Format("User = {0}, Credential Information is Empty , So Skip Handle.", UserName));
                                         }
+                                    }
+                                    else
+                                    {
+                                        return HttpReply;
                                     }
                                 }
                                 else
@@ -138,6 +147,10 @@ namespace AuthenticationAPI.Controllers
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetRegisterStatus(UserName, HttpReply.procstep);
+                                    }
+                                    else
+                                    {
+                                        return HttpReply;
                                     }
                                 }
                                 else
@@ -195,7 +208,7 @@ namespace AuthenticationAPI.Controllers
 
 
 
-        private void WebSocketUIDAnnounce(string username, Credential credentialcontent, Credential_Info credentialInfo)
+        private void WebSocketUIDAnnounce(string username, string credentialSign, Credential_Info credentialInfo)
         {
             WSTrx WebSocketReply = null;
             string replyProcStep = ProcessStep.ARWSCANN.ToString();
@@ -203,9 +216,11 @@ namespace AuthenticationAPI.Controllers
 
             try
             {
+                credentialInfo.Nonce = 0;
+                string credJsonStr = JsonSerializer.Serialize(credentialInfo);
                 ARWSCANN wsuidann = new ARWSCANN();
-                wsuidann.Credential = credentialcontent.CredContent;
-                wsuidann.CredentialSign = credentialcontent.CredSign.Substring(0, 8);  // Base on BLE Limit Send Credential Sign 8 Char
+                wsuidann.Credential = credJsonStr;
+                wsuidann.CredentialSign = credentialSign.Substring(0, 8);  // Base on BLE Limit Send Credential Sign 8 Char
                 wsuidann.SignedPublicKey = SecurityManager.SIGNRSASecurity().PublicKey;
                 wsuidann.DeviceUUID = credentialInfo.DeviceUUID;
                 string Datacontent = System.Text.Json.JsonSerializer.Serialize(wsuidann);

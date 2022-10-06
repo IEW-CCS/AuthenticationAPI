@@ -10,5 +10,6 @@ namespace AuthenticationAPI.DBContext
         public int id { get; set; }
         public string username { get; set; }
         public string password { get; set; }
+        public string sign { get; set; }
     }
 }

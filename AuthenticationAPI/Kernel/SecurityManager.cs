@@ -97,6 +97,7 @@ namespace AuthenticationAPI.Manager
                     authSecrity.client_publickey = AuthSecurityObject.ClientPublicKey;
                     authSecrity.server_privatekey = AuthSecurityObject.PrivateKey;
                     authSecrity.server_publickey = AuthSecurityObject.PublicKey;
+                    db.Attach(authSecrity).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                 }
                 db.SaveChanges();
             }
@@ -209,6 +210,16 @@ namespace AuthenticationAPI.Manager
                     AuthObj.ClientPublicKey = obj.client_publickey;
                     string key = string.Concat(obj.username, "_", obj.device_type);
                     this.RSADict.AddOrUpdate(key, AuthObj, (key, oldvalue) => AuthObj);
+                }
+
+                //----- Load Sign RSA
+                var signRSA = db.auth_conf.AsQueryable().Where(o => o.function == SIGNRSA).FirstOrDefault();
+                if (signRSA != null)
+                {
+                    //------- Insert to Dict -----
+                    AuthSecurity AuthSecu = new AuthSecurity(signRSA.item1, signRSA.item2);
+                    AuthSecu.ClientPublicKey = signRSA.item2;
+                    this.RSADict.AddOrUpdate(SIGNRSA, AuthSecu, (key, oldvalue) => AuthSecu);
                 }
             }
         }

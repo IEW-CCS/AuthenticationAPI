@@ -27,17 +27,17 @@ namespace AuthenticationAPI.Controllers
         private readonly IConfiguration Configuration;
         private readonly ISecurityManager SecurityManager;
         private readonly IQueueManager QueueManager;
-        // private readonly ILDAPManagement OpenVPN_LDAP;
+        private readonly ILDAPManagement OpenVPN_LDAP;
         private readonly ObjectManager ObjectManagerInstance;
 
-        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager)
+        public AuthenticateController(ILogger<AuthenticateController> logger, IEnumerable<IHttpTrxService> services, IQueueManager queuemanager, IObjectManager objectmanager, IConfiguration configuration, ISecurityManager securitymanager, ILDAPManagement openvpnldap)
         {
             Logger = logger;
             HttpTrxServices = services;
             Configuration = configuration;
             SecurityManager = securitymanager;
             QueueManager = queuemanager;
-            // OpenVPN_LDAP = openvpnldap;
+            OpenVPN_LDAP = openvpnldap;
             ObjectManagerInstance = (ObjectManager)objectmanager.GetInstance;
         }
 
@@ -78,6 +78,10 @@ namespace AuthenticationAPI.Controllers
                                     {
                                         ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
                                     }
+                                    else
+                                    {
+                                        return HttpReply;
+                                    }
                                 }
                                 else
                                 {
@@ -100,6 +104,10 @@ namespace AuthenticationAPI.Controllers
                                     if (HttpReply.returncode == 0)
                                     {
                                         ObjectManagerInstance.SetVerifyStatus(UserName, HttpReply.procstep);
+                                    }
+                                    else
+                                    {
+                                        return HttpReply;
                                     }
                                 }
                                 else
@@ -144,6 +152,10 @@ namespace AuthenticationAPI.Controllers
                                             int RTCode = (int)HttpAuthErrorCode.HashPasswordCreateError;
                                             HttpReply = HttpReplyNG.Trx(ReplyProcessStep, RTCode);
                                         }
+                                    }
+                                    else
+                                    {
+                                        return HttpReply;
                                     }
                                 }
                                 else
@@ -207,8 +219,8 @@ namespace AuthenticationAPI.Controllers
 
             try
             {
-                result = true;
-                //result = OpenVPN_LDAP.ModifyUserPassword(UserName, hashPassword);
+                //result = true;
+                result = OpenVPN_LDAP.ModifyUserPassword(userName, hashPassword, out resultMessage);
             }
             catch (Exception ex)
             {

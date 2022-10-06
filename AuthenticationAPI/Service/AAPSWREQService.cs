@@ -122,7 +122,7 @@ namespace AuthenticationAPI.Service
             {
                 if (aapswreq.BiometricsResult == "OK")
                 {
-                    if (CheckSerialNo( username, aapswreq.SerialNo, out  RetMsg) == true)
+                    if (CheckSerialNo( username, aapswreq.SerialNumber, out  RetMsg) == true)
                     {
                         if(CheckCredentialSign(username, aapswreq.CredentialSign, out  RetMsg) == true)
                         {
@@ -196,21 +196,21 @@ namespace AuthenticationAPI.Service
         {
             bool result = false;
             RetMsg = string.Empty;
-            Credential card = this.ObjectManagerInstance.GetCredential(userName);
-            if (card == null)
+            string credSign = ObjectManagerInstance.GetCredentialSign(userName);
+            if (credSign == null)
             {
                 RetMsg = "Error !!, Not Find Regist Credential Information.";
                 result = false;
             }
             else
             {
-                if (card.CredSign.Substring(0, 8) != CredentialSign)
+                if (credSign.Substring(0, 8) != CredentialSign)
                 {
                     RetMsg = "Error !!, Credential Information Mismatch.";
                     result = false;
                 }
                 else
-                { 
+                {
                     RetMsg = string.Empty;
                     result = true;
                 }
@@ -316,7 +316,8 @@ namespace AuthenticationAPI.Service
                 Credential_Info cred = ObjectManagerInstance.GetCredInfo(username);
                 cred.Nonce = R;
                 credJson = JsonSerializer.Serialize(cred);
-                string SHAHW = Get_SHA1_Hash(cred);
+                //string SHAHW = Get_SHA1_Hash(cred);
+                string SHAHW = Get_SHA1_Hash(credJson);
                 ObjectManagerInstance.SetHashPassword(username, SHAHW);
                 result = true;
             }

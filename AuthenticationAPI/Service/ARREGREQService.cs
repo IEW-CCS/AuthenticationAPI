@@ -269,7 +269,7 @@ namespace AuthenticationAPI.Service
                 cred.DeviceUUID = string.Empty;
                 cred.Nonce = 0;
                 cred.CreateDateTime = DateTime.Now;
-                ObjectManagerInstance.SetCredInfo(name, cred);
+                ObjectManagerInstance.InitialCredInfo(name, cred);
             }
             catch (Exception ex)
             {

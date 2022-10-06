@@ -102,8 +102,8 @@ namespace AuthenticationAPI.Service
             string replyProcessStep = ProcessStep.CRCRLPLY.ToString();
             try
             {
-                Credential card = this.ObjectManagerInstance.GetCredential(username);
-                if (card == null)
+                string cardSign = this.ObjectManagerInstance.GetCredentialSign(username);
+                if (cardSign == null)
                 {
                     int RTCode = (int)HttpAuthErrorCode.CreateCredentialError;
                     HttpReply = HttpReplyNG.Trx(replyProcessStep, RTCode);
@@ -111,7 +111,7 @@ namespace AuthenticationAPI.Service
                 }
 
                 CCredReply = new CRCRLPLY();
-                CCredReply.CredentialSign = card.CredSign.Substring(0,8);   // Base on BLE Limit Send Credential Sign 8 Char
+                CCredReply.CredentialSign = cardSign.Substring(0,8);   // Base on BLE Limit Send Credential Sign 8 Char
                 
                 string CCredReplyJsonStr = System.Text.Json.JsonSerializer.Serialize(CCredReply);
                 AuthDES DES = new AuthDES();
@@ -162,10 +162,10 @@ namespace AuthenticationAPI.Service
                 string credJsonStr = JsonSerializer.Serialize(credObj);
                 if (SecurityManager.SIGNRSASecurity().SignString(credJsonStr, out string signOut, out string returnMsgOut) == 0)
                 {
-                    Credential Cred = new Credential();
-                    Cred.CredContent = credJsonStr;
-                    Cred.CredSign = signOut;
-                    this.ObjectManagerInstance.SetCredential(username, Cred);
+                    //Credential Cred = new Credential();
+                   // Cred.CredContent = credJsonStr;
+                   // Cred.CredSign = signOut;
+                    this.ObjectManagerInstance.SetCredentialSign(username, signOut);
                     result = true;
                 }
                 else

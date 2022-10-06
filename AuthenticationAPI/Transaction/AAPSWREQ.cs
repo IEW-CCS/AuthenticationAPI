@@ -8,14 +8,14 @@ namespace AuthenticationAPI.DtoS
     public class AAPSWREQ
     {
         public string BiometricsResult { get; set; }
-        public string SerialNo { get; set; }
+        public string SerialNumber { get; set; }
         public string CredentialSign { get; set; }
 
 
         public AAPSWREQ()
         {
             BiometricsResult = string.Empty;
-            SerialNo = string.Empty;
+            SerialNumber = string.Empty;
             CredentialSign = string.Empty;
         }
     }

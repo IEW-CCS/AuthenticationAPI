@@ -20,9 +20,9 @@ namespace AuthenticationAPI.Kernel
 
         //---- 長期存放資料需要存放進DB ------
         private  ConcurrentDictionary<string, Credential_Info> _CREDINFO= null;
+        private ConcurrentDictionary<string, string> _CREDSIGN= null;
 
         //---- 暫時存放 ------
-        private  ConcurrentDictionary<string, Credential> _credential = null;
         private  ConcurrentDictionary<string, PassCode_Info> _passcode = null;
         private  ConcurrentDictionary<string, SerialNo_Info> _serialno = null;
         private  ConcurrentDictionary<string, string> _registerStatus = null;
@@ -57,14 +57,15 @@ namespace AuthenticationAPI.Kernel
             }
           
             LoadCredentialInfoFromDB();
+            LoadCredentialSIGNFromDB();
         }
 
         public void init()
         {
             //---- Load from DB ----
             _CREDINFO = new ConcurrentDictionary<string, Credential_Info>();
+            _CREDSIGN = new ConcurrentDictionary<string, string>();
 
-            _credential = new ConcurrentDictionary<string, Credential>();
             _registerStatus = new ConcurrentDictionary<string, string>();
             _hashPassword = new ConcurrentDictionary<string, string>();
             _verifyStatus = new ConcurrentDictionary<string, string>();
@@ -92,18 +93,32 @@ namespace AuthenticationAPI.Kernel
             }
         }
 
+        private void LoadCredentialSIGNFromDB()
+        {
+            using (var db = new DBContext.MetaDBContext(Provider, ConnectStr))
+            {
+                var userInfolist = db.auth_info.AsQueryable().ToList();
+                foreach (var userInfo in userInfolist)
+                {
+                    this._CREDSIGN.AddOrUpdate(userInfo.username, userInfo.sign, (key, oldvalue) => userInfo.sign);
+                }
+            }
+        }
+
         public Credential_Info GetCredInfo(string Key)
         {
             return this._CREDINFO.GetOrAdd(Key, new Credential_Info());
         }
-        public void SetCredInfo(string Key, Credential_Info Obj)
+
+
+        public void InitialCredInfo(string Key, Credential_Info Obj)
         {
             this._CREDINFO.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
             try
             {
                 using (var db = new DBContext.MetaDBContext(Provider, ConnectStr))
                 {
-                    var CredentialInfo = db.auth_cred.AsQueryable().Where(o => o.UserName == Key && DateTime.Equals(o.CreateDateTime, Obj.CreateDateTime)).FirstOrDefault();
+                    var CredentialInfo = db.auth_cred.AsQueryable().Where(o => o.UserName == Key).FirstOrDefault();
                     if (CredentialInfo == null)
                     {
                         CredentialInfo = new AUTH_CRED();
@@ -122,6 +137,46 @@ namespace AuthenticationAPI.Kernel
                         CredentialInfo.APPVersion = Obj.APPVersion;
                         CredentialInfo.DeviceUUID = Obj.DeviceUUID;
                         CredentialInfo.Nonce = Obj.Nonce;
+                        CredentialInfo.CreateDateTime = Obj.CreateDateTime;
+                        db.Attach(CredentialInfo).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                    }
+                    db.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Initial CredInfo Exception  Msg = " + ex.Message);
+            }
+        }
+
+
+        public void SetCredInfo(string Key, Credential_Info Obj)
+        {
+            this._CREDINFO.AddOrUpdate(Key, Obj, (key, oldvalue) => Obj);
+            try
+            {
+                using (var db = new DBContext.MetaDBContext(Provider, ConnectStr))
+                {
+                    var CredentialInfo = db.auth_cred.AsQueryable().Where(o => o.UserName == Key ).FirstOrDefault();
+                    if (CredentialInfo == null)
+                    {
+                        CredentialInfo = new AUTH_CRED();
+                        CredentialInfo.UserName = Obj.UserName;
+                        CredentialInfo.APPGuid = Obj.APPGuid;
+                        CredentialInfo.APPVersion = Obj.APPVersion;
+                        CredentialInfo.DeviceUUID = Obj.DeviceUUID;
+                        CredentialInfo.Nonce = Obj.Nonce;
+                        CredentialInfo.CreateDateTime = Obj.CreateDateTime;
+                        db.auth_cred.Add(CredentialInfo);
+                    }
+                    else
+                    {
+                        CredentialInfo.UserName = Obj.UserName;
+                        CredentialInfo.APPGuid = Obj.APPGuid;
+                        CredentialInfo.APPVersion = Obj.APPVersion;
+                        CredentialInfo.DeviceUUID = Obj.DeviceUUID;
+                        CredentialInfo.Nonce = Obj.Nonce;
+                        db.Attach(CredentialInfo).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                     }
                     db.SaveChanges();
                 }
@@ -154,21 +209,42 @@ namespace AuthenticationAPI.Kernel
             }
         }
 
-        public Credential GetCredential(string Key)
+        public void SetCredSignDBTo(string username, string sign)
         {
-            Credential Cred = null;
-            if (this._credential.TryGetValue(Key, out Cred))
+            try
             {
-                return Cred;
+                using (var db = new DBContext.MetaDBContext(Provider, ConnectStr))
+                {
+                    var UserInfo = db.auth_info.AsQueryable().Where(o => o.username == username).FirstOrDefault();
+                    if (UserInfo != null)
+                    {
+                        UserInfo.sign = sign;
+                        db.Attach(UserInfo).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("SetDeviceMACInfo Exception  Msg = " + ex.Message);
+            }
+        }
+
+        public  string GetCredentialSign(string Key)
+        {
+            if (this._CREDSIGN.TryGetValue(Key, out string credSign))
+            {
+                return credSign;
             }
             else
             {
                 return null;
             }
         }
-        public void SetCredential(string Key, Credential cred)
+        public void SetCredentialSign(string Key, string credSign)
         {
-            this._credential.AddOrUpdate(Key, cred, (key, oldvalue) => cred);
+            this._CREDSIGN.AddOrUpdate(Key, credSign, (key, oldvalue) => credSign);
+            SetCredSignDBTo(Key, credSign);
         }
 
         public PassCode_Info GetPassCode(string Key)

@@ -233,7 +233,7 @@ namespace AuthenticationAPI.Service
                 }
 
                 Vryply = new AAUTHPLY();
-                Vryply.SerialNumber = GetSerialNo();
+                Vryply.SerialNumber = serialNo.SerialNo;
 
                 string APVRYPLYJsonStr = System.Text.Json.JsonSerializer.Serialize(Vryply);
                 AuthDES DES = new AuthDES();
